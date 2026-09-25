@@ -112,6 +112,8 @@ const join = (items: string[], max: number) => items.join(" ").slice(0, max).tri
 
 export function mockClinicalNote(transcript: string, context: NoteContext): ClinicalNote {
   const all = sentences(transcript);
+  // Real speech-to-text has no "Doctor:"/"Patient:" labels; then any sentence can be history.
+  const labelled = all.some((s) => s.patient);
   const used = new Set<string>();
   const take = (rule: RegExp, filter: (s: { text: string; patient: boolean }) => boolean = () => true) =>
     all
@@ -128,7 +130,9 @@ export function mockClinicalNote(transcript: string, context: NoteContext): Clin
   const plan = take(RULES.plan, (s) => !s.patient);
   const reason = take(RULES.reason).slice(0, 2);
   const pastHistory = take(RULES.pastHistory);
-  const history = all.filter((s) => s.patient && !used.has(s.text)).map((s) => s.text);
+  const history = all
+    .filter((s) => (s.patient || !labelled) && !used.has(s.text))
+    .map((s) => s.text);
 
   const conditions = context.conditions.filter((c) => c.status === "active").map(describeCondition);
 
