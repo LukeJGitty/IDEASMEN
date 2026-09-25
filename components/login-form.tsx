@@ -26,7 +26,7 @@ export function LoginForm() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className={fieldClass}
-              placeholder="you@example.com"
+              placeholder="you@clinic.co.nz"
             />
           </div>
         </div>
@@ -49,7 +49,7 @@ export function LoginForm() {
       {sent.success && (
         <form
           action={verify}
-          className="space-y-4 border-t border-black/15 pt-6"
+          className="space-y-4 border-t border-hippo-200 pt-6"
         >
           <input type="hidden" name="email" value={sent.email} />
           <div>
@@ -81,7 +81,7 @@ export function LoginForm() {
             size="xl"
             className="w-full"
           >
-            {verifying ? "Signing in…" : "Open workspace"}
+            {verifying ? "Signing in…" : "Sign in to Hippo"}
           </Button>
           <p role="alert" className="text-sm">
             {verified.error}

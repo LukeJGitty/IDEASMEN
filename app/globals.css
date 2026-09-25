@@ -4,8 +4,17 @@
 @theme {
   --color-black: #000000;
   --color-charcoal: #242424;
-  --color-blue: #2395ff;
-  --color-off-white: #f0f0f0;
+  /* Hippo brand: light blue surfaces, deep sky blue for actions (white text passes WCAG AA). */
+  --color-blue: #0369a1;
+  --color-off-white: #eaf5fd;
+  --color-hippo-50: #f5faff;
+  --color-hippo-100: #eaf5fd;
+  --color-hippo-200: #cfe9fb;
+  --color-hippo-300: #8fcff5;
+  --color-hippo-400: #5bb4ea;
+  --color-hippo-600: #0369a1;
+  --color-hippo-700: #075985;
+  --color-hippo-900: #0c4a6e;
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 }
 :root {
@@ -69,13 +78,13 @@
 }
 @layer base {
   body {
-    background: white;
+    background: var(--color-hippo-50);
     color: var(--color-black);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
   :focus-visible {
-    outline: 2px solid var(--color-black);
+    outline: 2px solid var(--color-hippo-600);
     outline-offset: 4px;
   }
   button,
@@ -85,7 +94,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   ::selection {
-    background: var(--color-blue);
+    background: var(--color-hippo-200);
     color: black;
   }
 }
