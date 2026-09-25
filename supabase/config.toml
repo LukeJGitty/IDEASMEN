@@ -12,7 +12,8 @@ major_version = 17
 [db.migrations]
 enabled = true
 [db.seed]
-enabled = false
+enabled = true
+sql_paths = ["./seed.sql"]
 [studio]
 enabled = true
 port = 55433
@@ -21,7 +22,8 @@ api_url = "http://127.0.0.1"
 enabled = true
 port = 55434
 [storage]
-enabled = false
+enabled = true
+file_size_limit = "25MiB"
 [auth]
 enabled = true
 site_url = "http://localhost:3000"

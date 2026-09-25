@@ -34,6 +34,62 @@ export type Database = {
   };
   public: {
     Tables: {
+      consultations: {
+        Row: {
+          audio_path: string | null;
+          consulted_at: string;
+          created_at: string;
+          doctor_id: string;
+          final_note: Json | null;
+          finalised_at: string | null;
+          finalised_by: string | null;
+          generated_draft: Json | null;
+          id: string;
+          patient_id: string;
+          status: string;
+          transcript: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          audio_path?: string | null;
+          consulted_at?: string;
+          created_at?: string;
+          doctor_id?: string;
+          final_note?: Json | null;
+          finalised_at?: string | null;
+          finalised_by?: string | null;
+          generated_draft?: Json | null;
+          id?: string;
+          patient_id: string;
+          status?: string;
+          transcript?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          audio_path?: string | null;
+          consulted_at?: string;
+          created_at?: string;
+          doctor_id?: string;
+          final_note?: Json | null;
+          finalised_at?: string | null;
+          finalised_by?: string | null;
+          generated_draft?: Json | null;
+          id?: string;
+          patient_id?: string;
+          status?: string;
+          transcript?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "consultations_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ideas: {
         Row: {
           created_at: string;
@@ -58,12 +114,163 @@ export type Database = {
         };
         Relationships: [];
       };
+      medical_conditions: {
+        Row: {
+          condition: string;
+          created_at: string;
+          created_by: string | null;
+          diagnosed_date: string | null;
+          id: string;
+          notes: string | null;
+          patient_id: string;
+          status: string;
+        };
+        Insert: {
+          condition: string;
+          created_at?: string;
+          created_by?: string | null;
+          diagnosed_date?: string | null;
+          id?: string;
+          notes?: string | null;
+          patient_id: string;
+          status?: string;
+        };
+        Update: {
+          condition?: string;
+          created_at?: string;
+          created_by?: string | null;
+          diagnosed_date?: string | null;
+          id?: string;
+          notes?: string | null;
+          patient_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "medical_conditions_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      medications: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          dose: string;
+          end_date: string | null;
+          frequency: string;
+          id: string;
+          name: string;
+          notes: string | null;
+          patient_id: string;
+          route: string | null;
+          start_date: string | null;
+          status: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          dose?: string;
+          end_date?: string | null;
+          frequency?: string;
+          id?: string;
+          name: string;
+          notes?: string | null;
+          patient_id: string;
+          route?: string | null;
+          start_date?: string | null;
+          status?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          dose?: string;
+          end_date?: string | null;
+          frequency?: string;
+          id?: string;
+          name?: string;
+          notes?: string | null;
+          patient_id?: string;
+          route?: string | null;
+          start_date?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "medications_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      patients: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          date_of_birth: string;
+          email: string | null;
+          first_name: string;
+          id: string;
+          last_name: string;
+          phone: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          date_of_birth: string;
+          email?: string | null;
+          first_name: string;
+          id?: string;
+          last_name: string;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          date_of_birth?: string;
+          email?: string | null;
+          first_name?: string;
+          id?: string;
+          last_name?: string;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          created_at: string;
+          full_name: string;
+          id: string;
+          is_clinician: boolean;
+        };
+        Insert: {
+          created_at?: string;
+          full_name?: string;
+          id: string;
+          is_clinician?: boolean;
+        };
+        Update: {
+          created_at?: string;
+          full_name?: string;
+          id?: string;
+          is_clinician?: boolean;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      is_clinician: { Args: never; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;

@@ -35,6 +35,8 @@ async function main() {
   const bob = publicClient();
   const anonymous = publicClient();
   const userIds: string[] = [];
+  const patientIds: string[] = [];
+  const audioPaths: string[] = [];
   const run = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const aliceEmail = `alice-${run}@example.test`;
   const bobEmail = `bob-${run}@example.test`;
@@ -156,6 +158,186 @@ async function main() {
       "PASS: database CRUD, anonymous denial, cross-account isolation, immutable ownership and DB validation",
     );
 
+    // Clinical records: shared between clinicians, closed to everyone else.
+    const carol = publicClient();
+    const carolEmail = `carol-${run}@example.test`;
+    const carolPassword = `local-only-${run}-Password1!`;
+    const { data: carolUser, error: carolError } =
+      await admin.auth.admin.createUser({
+        email: carolEmail,
+        password: carolPassword,
+        email_confirm: true,
+      });
+    assert.equal(carolError, null);
+    userIds.push(carolUser.user!.id);
+    assert.equal(
+      (
+        await carol.auth.signInWithPassword({
+          email: carolEmail,
+          password: carolPassword,
+        })
+      ).error,
+      null,
+    );
+    assert.ok(
+      (
+        await carol
+          .from("profiles")
+          .update({ is_clinician: true })
+          .eq("id", carolUser.user!.id)
+      ).error,
+      "Users cannot promote themselves to clinician",
+    );
+    assert.equal(
+      (
+        await admin
+          .from("profiles")
+          .update({ is_clinician: true })
+          .in("id", [userIds[0], userIds[1]])
+      ).error,
+      null,
+    );
+    const { data: patient, error: patientError } = await alice
+      .from("patients")
+      .insert({
+        first_name: "Integration",
+        last_name: `Demo-${run}`,
+        date_of_birth: "1990-01-01",
+      })
+      .select()
+      .single();
+    assert.equal(patientError, null);
+    patientIds.push(patient!.id);
+    assert.equal(patient!.created_by, userIds[0]);
+    assert.equal(
+      (await bob.from("patients").select().eq("id", patient!.id)).data?.length,
+      1,
+      "Clinicians share patients",
+    );
+    assert.equal(
+      (await carol.from("patients").select().eq("id", patient!.id)).data
+        ?.length,
+      0,
+      "Non-clinicians cannot read patients",
+    );
+    assert.ok(
+      (await anonymous.from("patients").select()).error,
+      "Anonymous patient reads are denied",
+    );
+    assert.ok(
+      (
+        await carol.from("patients").insert({
+          first_name: "Blocked",
+          last_name: "Demo",
+          date_of_birth: "1990-01-01",
+        })
+      ).error,
+      "Non-clinicians cannot create patients",
+    );
+    assert.ok(
+      (
+        await bob
+          .from("consultations")
+          .insert({ patient_id: patient!.id, doctor_id: userIds[0] })
+      ).error,
+      "Consultation authorship cannot be forged",
+    );
+    const { data: consultation, error: consultationError } = await bob
+      .from("consultations")
+      .insert({ patient_id: patient!.id })
+      .select()
+      .single();
+    assert.equal(consultationError, null);
+    assert.equal(consultation!.doctor_id, userIds[1]);
+    assert.equal(consultation!.status, "recording");
+    assert.equal(
+      (
+        await bob
+          .from("consultations")
+          .update({ transcript: "Fictional patient reports a mild cough." })
+          .eq("id", consultation!.id)
+      ).error,
+      null,
+    );
+    assert.ok(
+      (
+        await bob
+          .from("consultations")
+          .update({ transcript: "Rewritten" })
+          .eq("id", consultation!.id)
+      ).error,
+      "Raw transcripts are immutable",
+    );
+    assert.ok(
+      (
+        await bob
+          .from("consultations")
+          .update({ status: "finalised" })
+          .eq("id", consultation!.id)
+      ).error,
+      "Finalising requires a final note",
+    );
+    const { data: finalised, error: finaliseError } = await bob
+      .from("consultations")
+      .update({
+        status: "finalised",
+        final_note: { reasonForVisit: "Cough", plan: "Rest and fluids" },
+      })
+      .eq("id", consultation!.id)
+      .select()
+      .single();
+    assert.equal(finaliseError, null);
+    assert.equal(finalised!.finalised_by, userIds[1]);
+    assert.ok(finalised!.finalised_at);
+    assert.ok(
+      (
+        await alice
+          .from("consultations")
+          .update({ final_note: { plan: "Changed" } })
+          .eq("id", consultation!.id)
+      ).error,
+      "Finalised consultations are read-only",
+    );
+    const { data: timeline } = await alice
+      .from("consultations")
+      .select()
+      .eq("patient_id", patient!.id);
+    assert.equal(timeline?.[0]?.status, "finalised", "Clinicians share timelines");
+    assert.equal(
+      (await carol.from("consultations").select().eq("id", consultation!.id))
+        .data?.length,
+      0,
+    );
+    const audioPath = `${consultation!.id}/integration.webm`;
+    const audio = new Blob([new Uint8Array([26, 69, 223, 163])], {
+      type: "audio/webm",
+    });
+    assert.equal(
+      (await bob.storage.from("consultation-audio").upload(audioPath, audio))
+        .error,
+      null,
+    );
+    audioPaths.push(audioPath);
+    assert.ok(
+      (
+        await bob.storage
+          .from("consultation-audio")
+          .upload(audioPath, audio, { upsert: true })
+      ).error,
+      "Audio cannot be overwritten",
+    );
+    assert.ok(
+      (
+        await carol.storage
+          .from("consultation-audio")
+          .upload(`${consultation!.id}/carol.webm`, audio)
+      ).error,
+      "Non-clinicians cannot upload audio",
+    );
+    console.log(
+      "PASS: clinician sharing, non-clinician and anonymous denial, forged authorship, immutable transcript, finalisation lock and private audio",
+    );
+
     const env = {
       ...process.env,
       NEXT_PUBLIC_SUPABASE_URL: local.API_URL,
@@ -224,7 +406,12 @@ async function main() {
       for (const [name, value] of Object.entries(fields)) body.set(name, value);
       return request(path, { method: "POST", body });
     }
-    let response = await request("/ideas");
+    let response = await request("/api/patients");
+    assert.equal(response.status, 401, "Anonymous API requests are refused");
+    response = await request("/patients");
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get("location"), "/login");
+    response = await request("/ideas");
     assert.equal(response.status, 307);
     assert.equal(response.headers.get("location"), "/login");
     const login = await (await request("/login")).text();
@@ -263,6 +450,24 @@ async function main() {
     );
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("location"), "/ideas");
+    response = await request(`/api/patients/${patientIds[0]}`);
+    assert.equal(response.status, 200, "Clinicians can read patients via the API");
+    const { data: apiRecord } = await response.json();
+    assert.equal(apiRecord.patient.lastName, `Demo-${run}`);
+    response = await request(`/api/patients/${patientIds[0]}/consultations`);
+    const { data: apiTimeline } = await response.json();
+    assert.equal(apiTimeline[0].finalNote.plan, "Rest and fluids");
+    assert.equal(
+      (await request(`/api/patients?q=Demo-${run}`)).status,
+      400,
+      "Search rejects non-name characters",
+    );
+    response = await request(`/api/patients?q=Integration`);
+    assert.ok(
+      (await response.json()).data.some(
+        (item: { id: string }) => item.id === patientIds[0],
+      ),
+    );
     let html = await (await request("/ideas")).text();
     assert.ok(html.includes("A blank page."));
     response = await submit("/ideas", html, 'form:has(input[name="title"])', {
@@ -326,14 +531,26 @@ async function main() {
     assert.ok(
       (await (await request("/ideas")).text()).includes("A blank page."),
     );
+    assert.equal(
+      (await request("/api/patients")).status,
+      403,
+      "Signed-in non-clinicians are refused",
+    );
     console.log(
       "PASS: first-time email-code signup and empty private workspace",
     );
     console.log(
       "PASS: production HTTP sign-in email/code, session cookies, protected route, empty state, create/read/update/delete and sign-out",
     );
+    console.log(
+      "PASS: clinical API returns 401 anonymous, 403 non-clinician, and shared records to clinicians",
+    );
   } finally {
     server?.kill("SIGTERM");
+    if (audioPaths.length)
+      await admin.storage.from("consultation-audio").remove(audioPaths);
+    if (patientIds.length)
+      await admin.from("patients").delete().in("id", patientIds);
     for (const id of userIds) await admin.auth.admin.deleteUser(id);
   }
 }

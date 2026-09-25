@@ -23,8 +23,10 @@ export interface Consultation {
   doctorId: string;
   date: string;
   status: ConsultationStatus;
+  audioPath?: string;
   transcript?: string;
   generatedDraft?: ClinicalNote;
   finalNote?: ClinicalNote;
+  finalisedBy?: string;
   finalisedAt?: string;
 }

@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig, isConfigured } from "@/lib/config";
 
+// API routes are refreshed here but answer 401/403 themselves, as JSON.
+const protectedPages = ["/ideas", "/patients", "/consultations"];
+
 export async function proxy(request: NextRequest) {
   if (!isConfigured()) return NextResponse.next({ request });
   let response = NextResponse.next({ request });
@@ -19,7 +22,11 @@ export async function proxy(request: NextRequest) {
     },
   });
   const { data } = await supabase.auth.getClaims();
-  if (request.nextUrl.pathname.startsWith("/ideas") && !data?.claims.sub) {
+  const { pathname } = request.nextUrl;
+  if (
+    protectedPages.some((page) => pathname.startsWith(page)) &&
+    !data?.claims.sub
+  ) {
     const login = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.getAll().forEach((cookie) => login.cookies.set(cookie));
     login.headers.set("Cache-Control", "private, no-store");
@@ -29,4 +36,13 @@ export async function proxy(request: NextRequest) {
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
-export const config = { matcher: ["/ideas/:path*", "/login"] };
+export const config = {
+  matcher: [
+    "/ideas/:path*",
+    "/patients/:path*",
+    "/consultations/:path*",
+    "/api/:path*",
+    "/not-authorised",
+    "/login",
+  ],
+};
