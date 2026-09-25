@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: { default: "IDEASMEN", template: "%s · IDEASMEN" },
-  description: "Consultation recording, transcription and AI-drafted clinical notes.",
+  title: { default: "Hippo", template: "%s · Hippo" },
+  description: "Hippo records the consultation and drafts the clinical note for you to review.",
 };
 export default function RootLayout({
   children,
