@@ -12,6 +12,21 @@ Provider calls belong in `services/transcription.ts`, never in UI components.
 - `consultations.audio_path` and `consultations.transcript`. The transcript can be written once only; the database rejects a second write.
 - `getConsultation` from `lib/data/queries.ts`, and `authenticateClinician` plus `apiError` for the route handler.
 
+## Progress
+
+| Task | Where | Status |
+| --- | --- | --- |
+| 1. Consultation workspace page | `app/consultations/[id]/page.tsx` | ✅ (note step is a placeholder for WS04) |
+| 2. Recorder with playback, discard, timer, permission errors | `components/consultation/recorder.tsx` | ✅ code; needs a manual browser check |
+| 3. `POST /api/transcribe` with write-once audio and transcript, 502 + retry from stored audio | `app/api/transcribe/route.ts` | ✅ |
+| 4. Provider service with `mock` provider | `services/transcription.ts` | ✅ mock only; real provider waits for owner approval |
+| 5. Read-only "Raw transcript" view | `components/consultation/transcript.tsx` | ✅ |
+| Audio/input validation; unit and HTTP integration checks | `lib/validation.ts`, `tests/clinical.test.ts`, `scripts/test-integration.ts` | ✅ |
+
+Notes:
+- A retry (`audio_path` set, `transcript` null) sends only `consultationId`; the route transcribes the stored recording, because `audio_path` is write-once.
+- `next.config.ts` raises `experimental.proxyClientMaxBodySize` to 26 MB, because the proxy buffers `/api` bodies (10 MB by default).
+
 ## Tasks
 
 1. **Consultation workspace page** (`app/consultations/[id]/page.tsx`).

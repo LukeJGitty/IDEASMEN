@@ -408,6 +408,31 @@ async function main() {
     }
     let response = await request("/api/patients");
     assert.equal(response.status, 401, "Anonymous API requests are refused");
+    const { data: recordable, error: recordableError } = await alice
+      .from("consultations")
+      .insert({ patient_id: patientIds[0] })
+      .select()
+      .single();
+    assert.equal(recordableError, null);
+    const transcribeForm = (audio?: Blob) => {
+      const body = new FormData();
+      body.set("consultationId", recordable!.id);
+      if (audio) body.set("audio", audio, "recording.webm");
+      return body;
+    };
+    const recording = new Blob([new Uint8Array([26, 69, 223, 163, 1, 2])], {
+      type: "audio/webm;codecs=opus",
+    });
+    assert.equal(
+      (
+        await request("/api/transcribe", {
+          method: "POST",
+          body: transcribeForm(recording),
+        })
+      ).status,
+      401,
+      "Anonymous uploads are refused",
+    );
     response = await request("/patients");
     assert.equal(response.status, 307);
     assert.equal(response.headers.get("location"), "/login");
@@ -456,7 +481,65 @@ async function main() {
     assert.equal(apiRecord.patient.lastName, `Demo-${run}`);
     response = await request(`/api/patients/${patientIds[0]}/consultations`);
     const { data: apiTimeline } = await response.json();
-    assert.equal(apiTimeline[0].finalNote.plan, "Rest and fluids");
+    assert.equal(
+      apiTimeline.find((item: { id: string }) => item.id === consultation!.id)
+        .finalNote.plan,
+      "Rest and fluids",
+    );
+    assert.equal(
+      (
+        await request("/api/transcribe", {
+          method: "POST",
+          body: transcribeForm(new Blob(["text"], { type: "text/plain" })),
+        })
+      ).status,
+      400,
+      "Non-audio uploads are rejected",
+    );
+    assert.equal(
+      (
+        await request("/api/transcribe", {
+          method: "POST",
+          body: transcribeForm(),
+        })
+      ).status,
+      400,
+      "A first transcription needs audio",
+    );
+    response = await request("/api/transcribe", {
+      method: "POST",
+      body: transcribeForm(recording),
+    });
+    assert.equal(response.status, 200, "Recording uploads and transcribes");
+    const { data: transcribed } = await response.json();
+    audioPaths.push(transcribed.audioPath);
+    assert.ok(transcribed.audioPath.startsWith(`${recordable!.id}/`));
+    assert.ok(transcribed.audioPath.endsWith(".webm"));
+    assert.equal(transcribed.status, "transcribing");
+    assert.ok(transcribed.transcript.length > 0);
+    assert.equal(
+      (await bob.from("consultations").select().eq("id", recordable!.id).single())
+        .data?.transcript,
+      transcribed.transcript,
+      "The transcript persists and is shared",
+    );
+    assert.equal(
+      (
+        await request("/api/transcribe", {
+          method: "POST",
+          body: transcribeForm(recording),
+        })
+      ).status,
+      409,
+      "A second transcription is rejected",
+    );
+    const workspace = await (
+      await request(`/consultations/${recordable!.id}`)
+    ).text();
+    assert.ok(workspace.includes("Raw transcript"));
+    console.log(
+      "PASS: consultation audio upload, persisted write-once transcript and workspace page",
+    );
     assert.equal(
       (await request(`/api/patients?q=Demo-${run}`)).status,
       400,

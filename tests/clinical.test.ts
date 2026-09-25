@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clinicalNoteSchema, patientSearchSchema } from "../lib/validation";
+import {
+  audioExtension,
+  audioSchema,
+  clinicalNoteSchema,
+  maxAudioBytes,
+  patientSearchSchema,
+  transcribeSchema,
+} from "../lib/validation";
 import {
   toClinicalNote,
   toConsultation,
@@ -90,4 +97,39 @@ test("rows map to domain types without leaking nulls", () => {
   assert.equal(consultation.finalNote?.plan, "Rest");
   assert.equal(consultation.generatedDraft?.plan, "");
   assert.equal(consultation.finalisedBy, "d2");
+});
+
+test("transcribe input accepts recorder audio and rejects anything else", () => {
+  const consultationId = "00000000-0000-4000-8000-000000000001";
+  const webm = new Blob([new Uint8Array([1])], {
+    type: "audio/webm;codecs=opus",
+  });
+  assert.equal(audioExtension(webm.type), "webm");
+  assert.equal(audioExtension("audio/mp4"), "m4a");
+  assert.equal(
+    transcribeSchema.safeParse({ consultationId, audio: webm }).success,
+    true,
+  );
+  assert.equal(
+    transcribeSchema.safeParse({ consultationId }).success,
+    true,
+    "a retry reuses the stored recording",
+  );
+  for (const audio of [
+    new Blob([], { type: "audio/webm" }),
+    new Blob(["x"], { type: "video/webm" }),
+    new Blob(["x"], { type: "text/plain" }),
+    "not a file",
+  ])
+    assert.equal(
+      transcribeSchema.safeParse({ consultationId, audio }).success,
+      false,
+    );
+  assert.equal(
+    transcribeSchema.safeParse({ consultationId: "nope", audio: webm }).success,
+    false,
+  );
+  const oversized = { size: maxAudioBytes + 1, type: "audio/webm" };
+  Object.setPrototypeOf(oversized, Blob.prototype);
+  assert.equal(audioSchema.safeParse(oversized).success, false);
 });
