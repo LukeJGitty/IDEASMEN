@@ -35,14 +35,19 @@ PATCH /api/patients/:id                   -> Patient                            
 GET   /api/patients/:id/consultations     -> Consultation[] (newest first)                    [WS01 ✅]
 POST  /api/consultations                  -> Consultation  { patientId }                      [WS02]
 GET   /api/consultations/:id              -> Consultation                                     [WS01 ✅]
-PATCH /api/consultations/:id              -> Consultation  { finalNote?, status? }            [WS04]
+PATCH /api/consultations/:id              -> Consultation  { finalNote?, status? }            [WS04 ✅]
 ```
 
 ## Processing
 
 ```text
 POST /api/transcribe       multipart { audio, consultationId } -> Consultation   [WS03]
-POST /api/generate-note    { consultationId }                  -> Consultation   [WS04]
+POST /api/generate-note    { consultationId }                  -> Consultation   [WS04 ✅]
 ```
 
 `/api/transcribe` accepts an audio file and consultation ID. `/api/generate-note` accepts a consultation ID and reads the stored raw transcript itself. The client never supplies the transcript. Both integrations are server-side and must persist their result separately from the final note.
+
+### WS04 details
+
+- `POST /api/generate-note` returns `409` if a draft already exists, if there is no transcript yet, or if the consultation is finalised. It returns `502` if the note provider fails; nothing is written in that case.
+- `PATCH /api/consultations/:id` accepts only `status: "reviewing" | "finalised"`. Saving a review needs `finalNote`. Finalising uses the sent `finalNote`, or the saved review if none is sent. Unknown fields such as `finalisedBy` are rejected with `400`.

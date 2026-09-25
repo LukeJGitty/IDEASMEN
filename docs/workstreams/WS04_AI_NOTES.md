@@ -6,6 +6,26 @@ Own transcript-to-note generation, editable structured note fields, draft labell
 
 Provider calls belong in `services/noteGeneration.ts`, never in UI components.
 
+## Status
+
+Tasks 1 to 5 are implemented on branch `ws04-notes`. `pnpm lint`, `typecheck`, `test` and `build` pass. `pnpm test:integration` has not been run on this branch yet and needs a machine with Docker.
+
+- [x] 1. Note service: `services/noteGeneration.ts` (provider switch) and `lib/notes/generation.ts` (prompt, mock provider, output validation). `NOTE_PROVIDER=mock` is the default.
+- [x] 2. `POST /api/generate-note`
+- [x] 3. Review editor: `components/consultation/note-editor.tsx`
+- [x] 4. `finaliseConsultation` in `app/consultations/note-actions.ts`
+- [x] 5. `PATCH /api/consultations/:id`
+
+The write rules live in one place, `lib/data/notes.ts`, which both the routes and the Server Actions call.
+
+**Try it:** record (or put a transcript on) a consultation, then open `/consultations/<id>`. Below the raw transcript, the note step shows the generate button, then the editor, then the read-only final note.
+
+**UI entry point:** `<NoteStep consultation={c} finalisedByName={name} />` in `components/consultation/note-step.tsx`, rendered by WS03's workspace page in place of its placeholder. `getClinicianName` in `lib/data/notes.ts` resolves the finaliser's name.
+
+**For WS05:** the generate, edit and finalise steps can be added to `scripts/test-integration.ts` using the mock provider, so CI needs no key.
+
+**Switching to Claude:** set `NOTE_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` in `.env.local` (server-only), after the owner approves spend. `ANTHROPIC_MODEL` is optional.
+
 ## Builds on (from WS01)
 
 - `clinicalNoteSchema` and the `ClinicalNote` type. The draft and the final note use the same shape.

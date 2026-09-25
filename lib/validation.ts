@@ -73,3 +73,15 @@ export const transcribeSchema = z.object({
   consultationId: idSchema,
   audio: audioSchema.optional(),
 });
+
+// WS04: the note a clinician saves or finalises. Only these two statuses can be set here;
+// the database stamps who finalised and when.
+export const consultationPatchSchema = z
+  .object({
+    finalNote: clinicalNoteSchema.optional(),
+    status: z.enum(["reviewing", "finalised"]).optional(),
+  })
+  .strict()
+  .refine((body) => body.finalNote || body.status, "Send finalNote, status, or both.");
+export type ConsultationPatch = z.infer<typeof consultationPatchSchema>;
+export const generateNoteRequestSchema = z.object({ consultationId: idSchema }).strict();

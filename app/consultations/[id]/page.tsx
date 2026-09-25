@@ -5,6 +5,8 @@ import { getConsultation, getPatientRecord } from "@/lib/data/queries";
 import { idSchema } from "@/lib/validation";
 import { Recorder } from "@/components/consultation/recorder";
 import { Transcript } from "@/components/consultation/transcript";
+import { NoteStep } from "@/components/consultation/note-step";
+import { getClinicianName } from "@/lib/data/notes";
 
 export const metadata = { title: "Consultation" };
 
@@ -18,7 +20,10 @@ export default async function ConsultationPage({
   if (!id.success) notFound();
   const consultation = await getConsultation(supabase, id.data);
   if (!consultation) notFound();
-  const record = await getPatientRecord(supabase, consultation.patientId);
+  const [record, finalisedByName] = await Promise.all([
+    getPatientRecord(supabase, consultation.patientId),
+    getClinicianName(supabase, consultation.finalisedBy),
+  ]);
   const patientName = record
     ? `${record.patient.firstName} ${record.patient.lastName}`
     : "Unknown patient";
@@ -45,12 +50,14 @@ export default async function ConsultationPage({
         {consultation.transcript ? (
           <>
             <Transcript text={consultation.transcript} />
-            {/* WS04 replaces this with note generation and review. */}
-            <section className="rounded-[20px] border border-dashed border-black/20 p-6">
-              <h2 className="text-lg font-semibold">Clinical note</h2>
-              <p className="mt-2 text-sm leading-6 text-charcoal">
-                Draft note generation is not available yet.
-              </p>
+            <section aria-labelledby="note-heading">
+              <h2 id="note-heading" className="mb-4 text-lg font-semibold">
+                Clinical note
+              </h2>
+              <NoteStep
+                consultation={consultation}
+                finalisedByName={finalisedByName}
+              />
             </section>
           </>
         ) : (
