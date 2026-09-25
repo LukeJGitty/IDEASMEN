@@ -474,7 +474,7 @@ async function main() {
       { email: aliceEmail, code },
     );
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("location"), "/ideas");
+    assert.equal(response.headers.get("location"), "/patients");
     response = await request(`/api/patients/${patientIds[0]}`);
     assert.equal(response.status, 200, "Clinicians can read patients via the API");
     const { data: apiRecord } = await response.json();
