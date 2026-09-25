@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { signOut } from "@/app/login/actions";
 import {
   createConsultation,
   updatePatient,
@@ -19,7 +18,7 @@ export default async function PatientDashboardPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { supabase, email } = await requireClinician();
+  const { supabase } = await requireClinician();
   const patientId = idSchema.safeParse((await params).id);
   if (!patientId.success) notFound();
 
@@ -29,24 +28,6 @@ export default async function PatientDashboardPage({
 
   return (
     <>
-      <header className="border-b border-black/10">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5 lg:px-[30px]">
-          <div className="flex items-center gap-3">
-            <Link href="/patients" className="font-semibold">
-              IDEASMEN / Patients
-            </Link>
-            <Link href="/" className="text-sm text-charcoal underline-offset-4 hover:underline">
-              Home
-            </Link>
-          </div>
-          <div className="flex min-w-0 items-center gap-4">
-            <span className="max-w-48 truncate text-sm text-charcoal">{email}</span>
-            <form action={signOut}>
-              <Button variant="ghost" type="submit">Sign out</Button>
-            </form>
-          </div>
-        </div>
-      </header>
 
       <main id="main" className="mx-auto max-w-6xl space-y-8 px-5 py-10 lg:px-[30px]">
         <section className="rounded-[24px] border border-black/10 bg-white p-6">

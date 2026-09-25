@@ -1,6 +1,15 @@
 import Link from "next/link";
 import type { Consultation } from "@/types/consultation";
 
+const statusLabels: Record<string, string> = {
+  recording: "Recording",
+  uploading: "Uploading",
+  transcribing: "Transcribed",
+  draft_generated: "AI draft ready",
+  reviewing: "In review",
+  finalised: "Finalised",
+};
+
 const statusClasses: Record<string, string> = {
   recording: "bg-slate-100 text-slate-700",
   uploading: "bg-amber-100 text-amber-700",
@@ -46,11 +55,11 @@ export function ConsultationTimeline({
                   })}
                 </Link>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[consultation.status] ?? "bg-stone-100 text-stone-700"}`}>
-                  {consultation.status}
+                  {statusLabels[consultation.status] ?? consultation.status}
                 </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-charcoal">{summary}</p>
-              {!isFinalised ? (
+              {!isFinalised && (consultation.generatedDraft || consultation.finalNote) ? (
                 <p className="mt-2 text-xs font-medium uppercase tracking-[0.08em] text-amber-700">
                   AI draft, not reviewed
                 </p>
