@@ -163,3 +163,39 @@ export const consultationPatchSchema = z
   .refine((body) => body.finalNote || body.status, "Send finalNote, status, or both.");
 export type ConsultationPatch = z.infer<typeof consultationPatchSchema>;
 export const generateNoteRequestSchema = z.object({ consultationId: idSchema }).strict();
+
+// Tasks (Hippo task manager). Due dates arrive as a calendar date or an ISO timestamp.
+const optionalUuid = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  idSchema.optional(),
+);
+export const taskCreateSchema = z.object({
+  patientId: idSchema,
+  consultationId: optionalUuid,
+  title: z
+    .string()
+    .trim()
+    .min(1, "Describe the task.")
+    .max(200, "Keep the task under 201 characters."),
+  details: z.string().trim().max(1000).optional(),
+  dueDate: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD.").optional(),
+  ),
+  dueAt: z.iso.datetime({ offset: true }).optional(),
+  assignedTo: optionalUuid,
+});
+export const taskSuggestionSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  dueAt: z.iso.datetime({ offset: true }).optional(),
+});
+export const taskUpdateSchema = z
+  .object({
+    status: z.enum(["open", "done"]).optional(),
+    assignedTo: z.union([idSchema, z.null()]).optional(),
+    title: z.string().trim().min(1).max(200).optional(),
+    dueAt: z.union([z.iso.datetime({ offset: true }), z.null()]).optional(),
+  })
+  .strict()
+  .refine((body) => Object.keys(body).length > 0, "Send at least one field to change.");
+export const taskViewSchema = z.enum(["mine", "open", "done"]).catch("mine");

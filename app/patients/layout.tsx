@@ -1,12 +1,3 @@
-import { AppHeader } from "@/components/shared/app-header";
-import { requireClinician } from "@/lib/auth";
+import { ClinicalLayout } from "@/components/shared/clinical-layout";
 
-export default async function ClinicalLayout({ children }: { children: React.ReactNode }) {
-  const { email } = await requireClinician();
-  return (
-    <>
-      <AppHeader email={email} />
-      {children}
-    </>
-  );
-}
+export default ClinicalLayout;

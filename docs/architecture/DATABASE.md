@@ -9,6 +9,7 @@ Schema: `supabase/migrations/20260925000000_clinical_core.sql` and `202609250001
 | `medications` | Per patient; `status` active or stopped | Insert and update; no delete |
 | `medical_conditions` | Per patient; `status` active or resolved | Insert and update; no delete |
 | `consultations` | Status, audio path, raw transcript, AI draft, final note, finaliser | Insert `patient_id` and `consulted_at`; update `status`, `audio_path`, `transcript`, `generated_draft`, `final_note` |
+| `tasks` | Follow-ups from finalised notes (`source = note`) or added by hand; shared by all clinicians (`20260926000000_tasks.sql`) | Insert `patient_id`, `consultation_id`, `title`, `details`, `due_at`, `source`, `assigned_to`; update `title`, `details`, `due_at`, `status`, `assigned_to`; no delete |
 | `storage: consultation-audio` | Private raw audio, max 25 MB | Upload and read only |
 
 ## Rules

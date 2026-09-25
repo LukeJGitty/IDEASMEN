@@ -51,3 +51,13 @@ POST /api/generate-note    { consultationId }                  -> Consultation  
 
 - `POST /api/generate-note` returns `409` if a draft already exists, if there is no transcript yet, or if the consultation is finalised. It returns `502` if the note provider fails; nothing is written in that case.
 - `PATCH /api/consultations/:id` accepts only `status: "reviewing" | "finalised"`. Saving a review needs `finalNote`. Finalising uses the sent `finalNote`, or the saved review if none is sent. Unknown fields such as `finalisedBy` are rejected with `400`.
+
+## Tasks
+
+```text
+GET   /api/tasks?view=mine|open|done   -> (Task & { patientName })[] (overdue first)
+POST  /api/tasks                        -> Task  { patientId, title, consultationId?, dueDate? | dueAt?, assignedTo? }
+PATCH /api/tasks/:id                    -> Task  { status?, assignedTo?, title?, dueAt? }
+```
+
+`dueDate` is a calendar date and becomes 5pm New Zealand time. The database fills `created_by`, and stamps `completed_by`/`completed_at` when a task is marked done. Tasks are never deleted; they are completed or reopened.

@@ -334,6 +334,64 @@ async function main() {
       ).error,
       "Non-clinicians cannot upload audio",
     );
+    // Tasks: shared between clinicians, authorship and completion stamped by the database.
+    const { data: task, error: taskError } = await alice
+      .from("tasks")
+      .insert({
+        patient_id: patient!.id,
+        consultation_id: consultation!.id,
+        title: "Repeat bloods in 2 days",
+        assigned_to: userIds[1],
+        source: "note",
+      })
+      .select()
+      .single();
+    assert.equal(taskError, null);
+    assert.equal(task!.created_by, userIds[0]);
+    assert.equal(task!.status, "open");
+    assert.ok(
+      (
+        await bob
+          .from("tasks")
+          .insert({ patient_id: patient!.id, title: "Forged", created_by: userIds[0] })
+      ).error,
+      "Task authorship cannot be forged",
+    );
+    assert.equal(
+      (await carol.from("tasks").select().eq("id", task!.id)).data?.length,
+      0,
+      "Non-clinicians cannot read tasks",
+    );
+    assert.ok(
+      (await carol.from("tasks").insert({ patient_id: patient!.id, title: "Blocked" })).error,
+      "Non-clinicians cannot create tasks",
+    );
+    const { data: doneTask, error: doneError } = await bob
+      .from("tasks")
+      .update({ status: "done" })
+      .eq("id", task!.id)
+      .select()
+      .single();
+    assert.equal(doneError, null);
+    assert.equal(doneTask!.completed_by, userIds[1], "The database stamps who completed a task");
+    assert.ok(doneTask!.completed_at);
+    assert.ok(
+      (await alice.from("tasks").update({ completed_by: userIds[0] }).eq("id", task!.id)).error,
+      "Task completion cannot be forged",
+    );
+    assert.ok(
+      (await alice.from("tasks").delete().eq("id", task!.id)).error,
+      "Tasks cannot be deleted",
+    );
+    const { data: reopened } = await alice
+      .from("tasks")
+      .update({ status: "open" })
+      .eq("id", task!.id)
+      .select()
+      .single();
+    assert.equal(reopened!.completed_by, null, "Reopening clears the completion stamp");
+    console.log("PASS: shared tasks, forged authorship and completion denied, no deletes");
+
     console.log(
       "PASS: clinician sharing, non-clinician and anonymous denial, forged authorship, immutable transcript, finalisation lock and private audio",
     );
@@ -540,6 +598,31 @@ async function main() {
     console.log(
       "PASS: consultation audio upload, persisted write-once transcript and workspace page",
     );
+    response = await request("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patientId: patientIds[0], title: "Chase CXR report", dueDate: "2020-01-01" }),
+    });
+    assert.equal(response.status, 201, "Clinicians can add tasks via the API");
+    const { data: apiTask } = await response.json();
+    assert.equal(apiTask.status, "open");
+    response = await request("/api/tasks?view=open");
+    assert.ok(
+      (await response.json()).data.some((item: { id: string }) => item.id === apiTask.id),
+      "Open tasks are listed",
+    );
+    const tasksPage = await (await request("/tasks?view=open")).text();
+    assert.ok(tasksPage.includes("Chase CXR report") && tasksPage.includes("Overdue"));
+    response = await request(`/api/tasks/${apiTask.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "done" }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.status, "done");
+    const handoverPage = await (await request("/handover?hours=24")).text();
+    assert.ok(handoverPage.includes(`Demo-${run}`), "Recently seen patients appear in the handover");
+    console.log("PASS: task API, tasks page and handover page");
     assert.equal(
       (await request(`/api/patients?q=Demo-${run}`)).status,
       400,

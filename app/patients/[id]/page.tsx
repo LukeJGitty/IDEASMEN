@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/ui/field";
 import { requireClinician } from "@/lib/auth";
 import { getPatientRecord, listConsultations } from "@/lib/data/queries";
+import { listClinicians, listPatientTasks } from "@/lib/data/tasks";
+import { PatientTasks } from "@/components/tasks/patient-tasks";
 import { idSchema } from "@/lib/validation";
 
 export default async function PatientDashboardPage({
@@ -18,13 +20,17 @@ export default async function PatientDashboardPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { supabase } = await requireClinician();
+  const { supabase, userId } = await requireClinician();
   const patientId = idSchema.safeParse((await params).id);
   if (!patientId.success) notFound();
 
   const record = await getPatientRecord(supabase, patientId.data);
   if (!record) notFound();
-  const consultations = await listConsultations(supabase, patientId.data);
+  const [consultations, tasks, clinicians] = await Promise.all([
+    listConsultations(supabase, patientId.data),
+    listPatientTasks(supabase, patientId.data),
+    listClinicians(supabase),
+  ]);
 
   return (
     <>
@@ -108,7 +114,15 @@ export default async function PatientDashboardPage({
           <ConditionList patientId={record.patient.id} conditions={record.conditions} />
         </div>
 
-        <ConsultationTimeline consultations={consultations} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ConsultationTimeline consultations={consultations} />
+          <PatientTasks
+            patientId={record.patient.id}
+            tasks={tasks}
+            clinicians={clinicians}
+            currentUserId={userId}
+          />
+        </div>
       </main>
     </>
   );
