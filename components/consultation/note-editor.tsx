@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/ui/field";
 import { NOTE_FIELDS, fieldValue } from "@/lib/notes/form";
+import { formatDue, suggestTasks, type TaskSuggestion } from "@/lib/tasks/logic";
 import type { ClinicalNote } from "@/types/consultation";
 
 const same = (a: string, b: string) => a.trim() === b.trim();
@@ -34,6 +35,12 @@ export function NoteEditor({
     Object.fromEntries(NOTE_FIELDS.map(({ key }) => [key, fieldValue(initial, key)])),
   );
   const [confirming, setConfirming] = useState(false);
+  // Worked out when the clinician opens the finalise step, from the plan as edited.
+  const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([]);
+  const openConfirm = () => {
+    setSuggestions(suggestTasks({ plan: values.plan, followUp: values.followUp }));
+    setConfirming(true);
+  };
   const busy = saving || finalising;
   const edited = NOTE_FIELDS.filter(({ key }) => !same(values[key], fieldValue(draft, key)));
   const message = finaliseState.error || saveState.error || finaliseState.success || saveState.success;
@@ -91,7 +98,7 @@ export function NoteEditor({
           {saving ? "Saving…" : "Save review"}
         </Button>
         {!confirming && (
-          <Button type="button" onClick={() => setConfirming(true)} disabled={busy}>
+          <Button type="button" onClick={openConfirm} disabled={busy}>
             Finalise note…
           </Button>
         )}
@@ -104,6 +111,36 @@ export function NoteEditor({
             The note is saved exactly as shown above and locked. It can’t be edited afterwards, and
             you’ll be recorded as the finalising clinician. The original AI draft is kept unchanged.
           </p>
+          {suggestions.length > 0 && (
+            <fieldset className="mt-4 rounded-2xl border border-hippo-200 bg-white p-4">
+              <legend className="px-1 text-sm font-semibold">Follow-up tasks from the plan</legend>
+              <p className="mb-3 text-xs text-charcoal">
+                Ticked tasks are added to Tasks and assigned to you. Untick any you don’t need.
+              </p>
+              <ul className="space-y-2">
+                {suggestions.map((task) => (
+                  <li key={task.title}>
+                    <label className="flex items-start gap-3 text-sm">
+                      <input
+                        type="checkbox"
+                        name="suggestedTask"
+                        value={JSON.stringify(task)}
+                        defaultChecked
+                        className="mt-1 size-4"
+                        disabled={busy}
+                      />
+                      <span>
+                        {task.title}
+                        <span className="block text-xs text-charcoal/70">
+                          {task.dueAt ? `Due ${formatDue(task.dueAt)}` : "No due date"}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          )}
           <label className="mt-4 flex items-start gap-3 text-sm">
             <input
               type="checkbox"

@@ -265,6 +265,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      tasks: {
+        Row: {
+          assigned_to: string | null;
+          completed_at: string | null;
+          completed_by: string | null;
+          consultation_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          details: string | null;
+          due_at: string | null;
+          id: string;
+          patient_id: string;
+          source: string;
+          status: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_to?: string | null;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          consultation_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          details?: string | null;
+          due_at?: string | null;
+          id?: string;
+          patient_id: string;
+          source?: string;
+          status?: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_to?: string | null;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          consultation_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          details?: string | null;
+          due_at?: string | null;
+          id?: string;
+          patient_id?: string;
+          source?: string;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tasks_consultation_id_fkey";
+            columns: ["consultation_id"];
+            isOneToOne: false;
+            referencedRelation: "consultations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tasks_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
