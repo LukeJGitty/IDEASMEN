@@ -22,14 +22,14 @@ export function PatientSearch({
       </div>
       <form action="/patients" method="get" className="space-y-4">
         <label htmlFor="patient-search" className="block text-sm font-medium">
-          Search by name or patient ID
+          Search by name or NHI
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             id="patient-search"
             name="q"
             defaultValue={query}
-            placeholder="Search Aroha, Tane, or a patient UUID"
+            placeholder="e.g. Aroha, Demo-Walker or ZZZ0016"
             className={fieldClass}
           />
           <Button type="submit">Search</Button>
@@ -67,8 +67,8 @@ export function PatientSearch({
                       })}
                     </p>
                   </div>
-                  <span className="rounded-full bg-off-white px-3 py-1 text-xs font-medium uppercase tracking-[0.08em] text-charcoal">
-                    {patient.id.slice(0, 8)}
+                  <span className="rounded-full bg-off-white px-3 py-1 font-mono text-xs font-medium tracking-[0.08em] text-hippo-900">
+                    {patient.nhi ? `NHI ${patient.nhi}` : "No NHI"}
                   </span>
                 </div>
               </Link>

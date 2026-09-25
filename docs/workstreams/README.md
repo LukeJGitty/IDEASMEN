@@ -39,6 +39,7 @@ pnpm db:start                 # first run downloads images (several minutes)
 pnpm supabase status          # copy API URL + publishable key into .env.local
 pnpm db:reset                 # local only: applies migrations + fictional seed patients
 pnpm db:seed-users            # creates clinician.a@example.com and clinician.b@example.com
+pnpm db:seed-demo             # fictional consultations, tasks and a 7-day roster (re-runnable)
 pnpm dev
 ```
 

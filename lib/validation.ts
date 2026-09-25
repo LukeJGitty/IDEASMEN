@@ -27,6 +27,15 @@ const optionalText = (max: number) =>
     z.string().max(max).optional(),
   );
 
+// National Health Index: 3 letters (no I/O) + 4 digits, or + 2 digits and 2 letters.
+export const NHI_PATTERN = /^[A-HJ-NP-Z]{3}(\d{4}|\d{2}[A-HJ-NP-Z]{2})$/;
+export const normaliseNhi = (value: string) => value.replace(/\s+/g, "").toUpperCase();
+export const isNhi = (value: string) => NHI_PATTERN.test(normaliseNhi(value));
+export const nhiSchema = z
+  .string()
+  .transform(normaliseNhi)
+  .refine((value) => NHI_PATTERN.test(value), "Enter a valid NHI, e.g. ZZZ0016.");
+
 export const patientSchema = z.object({
   firstName: z
     .string()
@@ -47,6 +56,10 @@ export const patientSchema = z.object({
     "Enter a valid email address.",
   ),
   phone: optionalText(40),
+  nhi: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? undefined : value),
+    nhiSchema.optional(),
+  ),
 });
 
 export const medicationSchema = z.object({
@@ -103,8 +116,10 @@ export const patientSearchSchema = z
   .max(100, "Keep the search under 101 characters.")
   .refine(
     (value) =>
-      /^[\p{L}\p{M}' -]*$/u.test(value) || idSchema.safeParse(value).success,
-    "Search by name or patient ID.",
+      /^[\p{L}\p{M}' -]*$/u.test(value) ||
+      idSchema.safeParse(value).success ||
+      isNhi(value),
+    "Search by name, NHI or patient ID.",
   );
 
 const noteText = (max: number) => z.string().trim().max(max).default("");
@@ -199,3 +214,16 @@ export const taskUpdateSchema = z
   .strict()
   .refine((body) => Object.keys(body).length > 0, "Send at least one field to change.");
 export const taskViewSchema = z.enum(["mine", "open", "done"]).catch("mine");
+
+// Roster shifts. Times arrive as a NZ calendar date plus HH:MM start and end.
+export const rosterShiftSchema = z
+  .object({
+    staffName: z.string().trim().min(1, "Add the staff member’s name.").max(80),
+    role: z.enum(["doctor", "nurse", "reception", "other"]),
+    area: z.string().trim().min(1, "Add the area, e.g. Clinic.").max(60),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+    start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a start time."),
+    end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick an end time."),
+    notes: z.string().trim().max(200).optional(),
+  })
+  .refine((shift) => shift.end !== shift.start, "The shift needs to end after it starts.");

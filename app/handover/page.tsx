@@ -3,6 +3,9 @@ import { HandoverList } from "@/components/handover/handover-list";
 import { PrintButton } from "@/components/handover/print-button";
 import { requireClinician } from "@/lib/auth";
 import { loadHandover } from "@/lib/data/handover";
+import { listShifts } from "@/lib/data/roster";
+import { OnShiftNow } from "@/components/roster/on-shift-now";
+import { onShiftNow } from "@/lib/roster/logic";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Handover" };
@@ -22,7 +25,11 @@ export default async function HandoverPage({
   const { supabase } = await requireClinician();
   const requested = Number((await searchParams).hours);
   const hours = WINDOWS.some((w) => w.hours === requested) ? requested : 24;
-  const { items, truncated } = await loadHandover(supabase, hours);
+  const now = new Date();
+  const [{ items, truncated }, shifts] = await Promise.all([
+    loadHandover(supabase, hours),
+    listShifts(supabase, new Date(now.getTime() - 86_400_000), new Date(now.getTime() + 86_400_000)),
+  ]);
   const generatedAt = new Intl.DateTimeFormat("en-NZ", {
     timeZone: "Pacific/Auckland",
     dateStyle: "medium",
@@ -44,6 +51,10 @@ export default async function HandoverPage({
         <div className="print:hidden">
           <PrintButton />
         </div>
+      </div>
+
+      <div className="mt-8">
+        <OnShiftNow shifts={onShiftNow(shifts, now)} />
       </div>
 
       <nav aria-label="Handover period" className="mt-8 flex flex-wrap gap-2 print:hidden">

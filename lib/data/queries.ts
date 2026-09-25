@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { idSchema } from "@/lib/validation";
+import { idSchema, isNhi, normaliseNhi } from "@/lib/validation";
 import {
   toCondition,
   toConsultation,
@@ -23,6 +23,7 @@ function check<T>(result: { data: T | null; error: unknown }, what: string) {
 export async function searchPatients(supabase: Client, query: string) {
   let request = supabase.from("patients").select("*");
   if (idSchema.safeParse(query).success) request = request.eq("id", query);
+  else if (isNhi(query)) request = request.eq("nhi", normaliseNhi(query));
   else
     for (const term of query.split(/\s+/).filter(Boolean))
       request = request.or(

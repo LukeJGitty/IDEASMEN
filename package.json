@@ -17,6 +17,7 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset --local",
     "db:seed-users": "tsx scripts/seed-demo-users.ts",
+    "db:seed-demo": "tsx scripts/seed-demo-data.ts",
     "db:types": "supabase gen types typescript --local > lib/database.types.ts"
   },
   "dependencies": {

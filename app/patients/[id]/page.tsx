@@ -43,6 +43,9 @@ export default async function PatientDashboardPage({
               <h1 className="mt-3 text-3xl font-semibold">
                 {record.patient.firstName} {record.patient.lastName}
               </h1>
+              <p className="mt-2 font-mono text-sm text-hippo-900">
+                {record.patient.nhi ? `NHI ${record.patient.nhi}` : "No NHI recorded"}
+              </p>
             </div>
             <form action={createConsultation}>
               <input type="hidden" name="patientId" value={record.patient.id} />
@@ -91,7 +94,11 @@ export default async function PatientDashboardPage({
                 <input id="lastName" name="lastName" defaultValue={record.patient.lastName} className={fieldClass} required />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
+              <div>
+                <label htmlFor="nhi" className="mb-2 block text-sm font-medium">NHI</label>
+                <input id="nhi" name="nhi" defaultValue={record.patient.nhi ?? ""} placeholder="ZZZ0016" maxLength={9} className={`${fieldClass} font-mono uppercase`} />
+              </div>
               <div>
                 <label htmlFor="dateOfBirth" className="mb-2 block text-sm font-medium">Date of birth</label>
                 <input id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={record.patient.dateOfBirth} className={fieldClass} required />

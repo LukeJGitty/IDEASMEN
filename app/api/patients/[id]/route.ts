@@ -38,6 +38,7 @@ export async function PATCH(
           date_of_birth: parsed.data.dateOfBirth,
           email: parsed.data.email,
           phone: parsed.data.phone,
+          nhi: parsed.data.nhi,
         })
         .eq("id", id.data)
         .select("*")
@@ -50,6 +51,7 @@ export async function PATCH(
         dateOfBirth: data.date_of_birth,
         email: data.email ?? undefined,
         phone: data.phone ?? undefined,
+        nhi: data.nhi ?? undefined,
       });
     });
   } catch {

@@ -29,6 +29,7 @@ export async function POST(request: Request) {
           date_of_birth: parsed.data.dateOfBirth,
           email: parsed.data.email,
           phone: parsed.data.phone,
+          nhi: parsed.data.nhi,
         })
         .select("*")
         .single();
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
         dateOfBirth: data.date_of_birth,
         email: data.email ?? undefined,
         phone: data.phone ?? undefined,
+        nhi: data.nhi ?? undefined,
       });
     });
   } catch {
