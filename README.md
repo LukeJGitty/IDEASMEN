@@ -4,6 +4,10 @@
 
 A working foundation for SaaSathon teams: Next.js, TypeScript, Supabase and Tailwind. Sign in by email, create an idea, edit it, then delete it. Every account owns its data, enforced by Postgres row-level security.
 
+## Medical platform structure
+
+The repository is now being organized for the Medical Transcription & Patient Record Platform. Read [PROJECT_MASTER.md](PROJECT_MASTER.md) before changing the architecture, then use the contracts in [docs/architecture](docs/architecture) and ownership notes in [docs/workstreams](docs/workstreams). The original ideas example remains available as starter reference until the clinical workflow replaces it.
+
 [Use this template](https://github.com/justus-lumin/SaaSathon-Template/generate) · [SaaSathon](https://www.saasathon.dev) · [Database migration](supabase/migrations/20260908000000_ideas.sql)
 
 ## What you get
