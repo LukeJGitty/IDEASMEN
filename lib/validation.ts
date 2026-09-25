@@ -41,3 +41,35 @@ export const clinicalNoteSchema = z.object({
   plan: noteText(4000),
   followUp: noteText(2000),
 });
+
+// Consultation audio (WS03). Mirrors the consultation-audio bucket's limits.
+export const maxAudioBytes = 25 * 1024 * 1024;
+const audioExtensions: Record<string, string> = {
+  "audio/webm": "webm",
+  "audio/ogg": "ogg",
+  "audio/mp4": "m4a",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+};
+/** MediaRecorder reports types like `audio/webm;codecs=opus`; storage wants the base type. */
+export const baseMimeType = (type: string) =>
+  type.split(";")[0].trim().toLowerCase();
+export const audioExtension = (type: string) =>
+  audioExtensions[baseMimeType(type)];
+
+export const audioSchema = z
+  .instanceof(Blob, { message: "Attach an audio recording." })
+  .refine((audio) => audio.size > 0, "The recording is empty.")
+  .refine(
+    (audio) => audio.size <= maxAudioBytes,
+    "Keep recordings under 25 MB.",
+  )
+  .refine(
+    (audio) => audioExtension(audio.type) !== undefined,
+    "Upload WebM, Ogg, MP4, MP3 or WAV audio.",
+  );
+// `audio` may be omitted when retrying a consultation whose audio is already stored.
+export const transcribeSchema = z.object({
+  consultationId: idSchema,
+  audio: audioSchema.optional(),
+});

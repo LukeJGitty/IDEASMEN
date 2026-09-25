@@ -18,7 +18,7 @@ Five workstreams deliver the MVP flow in `PROJECT_MASTER.md`:
 | --- | --- | --- |
 | WS01 Foundation | Phase 1 merged: schema, RLS, auth guard, read API, seed data | Phase 2 list in [WS01](WS01_FOUNDATION.md) |
 | WS02 Patients | **Ready to start** | Task 1 in [WS02](WS02_PATIENTS.md) |
-| WS03 Recording & Transcription | **Ready to start** (use a Studio- or SQL-created consultation until WS02 task 5 lands) | Task 4 (mock provider), then task 1 |
+| WS03 Recording & Transcription | In progress on `ws03-recording`: all tasks built on the mock provider | Manual browser check, then the real provider once approved |
 | WS04 AI Notes | **Ready to start** (write a transcript onto a consultation in Studio to develop against) | Task 1 (mock provider) |
 | WS05 Integration & QA | Ongoing | Task 2 |
 
