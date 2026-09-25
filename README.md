@@ -8,6 +8,8 @@ A working foundation for SaaSathon teams: Next.js, TypeScript, Supabase and Tail
 
 The repository is now being organized for the Medical Transcription & Patient Record Platform. Read [PROJECT_MASTER.md](PROJECT_MASTER.md) before changing the architecture, then use the contracts in [docs/architecture](docs/architecture) and ownership notes in [docs/workstreams](docs/workstreams). The original ideas example remains available as starter reference until the clinical workflow replaces it.
 
+**Picking up a workstream?** Start with [docs/workstreams/README.md](docs/workstreams/README.md). It covers the current status of each workstream, setup, the demo clinician accounts, the helpers to reuse, and the PR checklist.
+
 [Use this template](https://github.com/justus-lumin/SaaSathon-Template/generate) · [SaaSathon](https://www.saasathon.dev) · [Database migration](supabase/migrations/20260908000000_ideas.sql)
 
 ## What you get

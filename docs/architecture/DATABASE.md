@@ -1,13 +1,32 @@
 # Database Plan
 
-The initial schema will contain `profiles`, `patients`, `consultations`, `medications`, and `medical_conditions`.
+Schema: `supabase/migrations/20260925000000_clinical_core.sql` and `20260925000100_consultation_audio.sql`. Types: `lib/database.types.ts`.
+
+| Table | Purpose | Client writes |
+| --- | --- | --- |
+| `profiles` | One per auth user (created by a trigger). `is_clinician` gates all clinical data. | Update `full_name` only |
+| `patients` | Fictional demographics | Insert and update demographics; no delete |
+| `medications` | Per patient; `status` active or stopped | Insert and update; no delete |
+| `medical_conditions` | Per patient; `status` active or resolved | Insert and update; no delete |
+| `consultations` | Status, audio path, raw transcript, AI draft, final note, finaliser | Insert `patient_id` and `consulted_at`; update `status`, `audio_path`, `transcript`, `generated_draft`, `final_note` |
+| `storage: consultation-audio` | Private raw audio, max 25 MB | Upload and read only |
 
 ## Rules
 
 - Every public table gets a migration, grants, and row-level security policies.
-- Patient and consultation access is limited to authenticated clinicians for the MVP.
-- A consultation stores its status, raw transcript, generated draft, final note, creator, and finaliser timestamps.
-- Raw transcripts are immutable after generation.
-- Use fictional/demo data in local seeds and tests only.
+- Clinical access requires `public.is_clinician()`. All clinicians share all patients for the MVP. Only an administrator can set `profiles.is_clinician`.
+- The database fills `created_by` and `doctor_id` from `auth.uid()`, and clients cannot submit them.
+- `guard_consultation_update` enforces the review rules in the database:
+  - `transcript`, `generated_draft`, and `audio_path` are write-once.
+  - `status = 'finalised'` requires `final_note`, and the database stamps `finalised_by` and `finalised_at`.
+  - A finalised consultation is read-only.
+- Notes are stored as JSON matching `clinicalNoteSchema` (`lib/validation.ts`). An unparseable stored note is surfaced as missing.
+- Use fictional/demo data in local seeds (`supabase/seed.sql`) and tests only.
 
-The first schema migration should be added after the shared contracts have been reviewed. Keep the existing starter migration intact.
+## Local demo setup
+
+```sh
+pnpm db:start
+pnpm db:reset         # applies migrations and fictional seed patients (local only)
+pnpm db:seed-users    # clinician.a@example.com and clinician.b@example.com; codes arrive in the local inbox
+```
