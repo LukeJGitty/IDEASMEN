@@ -102,3 +102,15 @@ test("PATCH and generate requests reject anything outside the contract", () => {
     "the transcript is always read from the database",
   );
 });
+
+test("mock provider still fills history from unlabelled speech-to-text output", () => {
+  const note = mockClinicalNote(
+    "I've had a sore throat for three days. It hurts to swallow. Your throat looks red on examination. Take paracetamol. Come back in five days if it's not better.",
+    { medications: [], conditions: [] },
+  );
+  assert.match(note.reasonForVisit + note.history, /sore throat/);
+  assert.match(note.history, /hurts to swallow/);
+  assert.match(note.observations, /red on examination/);
+  assert.match(note.plan, /paracetamol/);
+  assert.match(note.followUp, /five days/);
+});
