@@ -53,8 +53,8 @@ export default function Home() {
                 it yours.
               </p>
               <Button asChild size="xl">
-                <Link href="/ideas">
-                  Open your workspace <ArrowRight aria-hidden="true" />
+                <Link href="/patients">
+                  Open the patient workspace <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
               <p className="text-sm">One example. The essentials, connected.</p>
