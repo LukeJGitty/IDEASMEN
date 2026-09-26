@@ -90,6 +90,24 @@ export type Database = {
           },
         ];
       };
+      demo_settings: {
+        Row: {
+          demo_name: string;
+          id: boolean;
+          open_signup: boolean;
+        };
+        Insert: {
+          demo_name?: string;
+          id?: boolean;
+          open_signup?: boolean;
+        };
+        Update: {
+          demo_name?: string;
+          id?: boolean;
+          open_signup?: boolean;
+        };
+        Relationships: [];
+      };
       ideas: {
         Row: {
           created_at: string;
@@ -487,6 +505,7 @@ export type Database = {
     };
     Functions: {
       is_clinician: { Args: never; Returns: boolean };
+      set_open_demo: { Args: { enabled: boolean }; Returns: number };
     };
     Enums: {
       [_ in never]: never;
