@@ -11,6 +11,9 @@ type Recording = { blob: Blob; url: string };
 
 // Chrome and Firefox record WebM; Safari only records MP4.
 const preferredTypes = ["audio/webm", "audio/mp4"];
+// Speech needs little bandwidth. 32 kbps keeps a 15-minute consultation near 3.6 MB,
+// under the 4.5 MB request limit on Vercel, with no loss in transcription quality.
+const AUDIO_BITS_PER_SECOND = 32_000;
 
 const formatElapsed = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -79,7 +82,10 @@ export function Recorder({
     const mimeType = preferredTypes.find((type) =>
       MediaRecorder.isTypeSupported(type),
     );
-    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    const recorder = new MediaRecorder(stream, {
+      ...(mimeType ? { mimeType } : {}),
+      audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+    });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (event) => chunks.push(event.data);
     recorder.onstop = () => {
@@ -129,7 +135,11 @@ export function Recorder({
       const response = await fetch("/api/transcribe", { method: "POST", body });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        setError(payload.error ?? "Transcription failed. Try again.");
+        setError(
+          response.status === 413
+            ? "This recording is too long to upload here (about 18 minutes is the limit). Record the consultation in shorter parts."
+            : (payload.error ?? "Transcription failed. Try again."),
+        );
         setPhase(previous);
       }
     } catch {

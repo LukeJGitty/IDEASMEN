@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { updateTaskAction } from "@/app/tasks/actions";
+import { TeamToday } from "@/components/dashboard/team-today";
 import { WeekChart } from "@/components/dashboard/week-chart";
+import { FollowUpsThisWeek, ResultsToChase } from "@/components/dashboard/work-panels";
 import { FocusSearchButton } from "@/components/shared/search-shortcut";
 import { LiveRefresh } from "@/components/shared/live-refresh";
 import { Button } from "@/components/ui/button";
 import { requireClinician } from "@/lib/auth";
 import { REVIEW_LABEL, greeting } from "@/lib/dashboard/summary";
 import { loadDashboard } from "@/lib/data/dashboard";
-import { ROLE_LABEL } from "@/lib/roster/logic";
 import { dueBucket, formatDue } from "@/lib/tasks/logic";
 import { TIME_ZONE, formatNzTime } from "@/lib/time";
 
@@ -203,52 +204,14 @@ export default async function DashboardPage() {
               </ul>
             )}
           </section>
+
+          <ResultsToChase tasks={data.results} total={data.resultsTotal} clinicians={data.clinicians} now={now} />
         </div>
 
         <div className="space-y-6">
-          <section aria-labelledby="on-shift" className={card}>
-            <h2 id="on-shift" className={`${cardTitle} flex items-center gap-2`}>
-              <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" /> On shift now
-            </h2>
-            {data.onShift.length === 0 ? (
-              <p className="mt-3 text-sm text-charcoal">Nobody is rostered right now.</p>
-            ) : (
-              <ul className="mt-3 space-y-2 text-sm">
-                {data.onShift.map((s) => (
-                  <li key={s.id} className="flex justify-between gap-3">
-                    <span>
-                      <span className="font-medium">{s.staffName}</span>{" "}
-                      <span className="text-charcoal/80">
-                        {ROLE_LABEL[s.role]}, {s.area}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-charcoal/80">until {formatNzTime(s.endsAt)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {data.laterToday.length > 0 && (
-              <>
-                <h3 className="mt-5 text-xs font-semibold uppercase tracking-[0.08em] text-charcoal/80">
-                  Starting in the next 12 hours
-                </h3>
-                <ul className="mt-2 space-y-2 text-sm">
-                  {data.laterToday.map((s) => (
-                    <li key={s.id} className="flex justify-between gap-3">
-                      <span>
-                        <span className="font-medium">{s.staffName}</span>{" "}
-                        <span className="text-charcoal/80">{ROLE_LABEL[s.role]}</span>
-                      </span>
-                      <span className="shrink-0 text-charcoal/80">from {formatNzTime(s.startsAt)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            <Link href="/roster" className="mt-4 inline-block text-sm text-hippo-600 hover:underline">
-              Full roster
-            </Link>
-          </section>
+          <TeamToday team={data.team} />
+
+          <FollowUpsThisWeek rows={data.followUps} now={now} />
 
           <section aria-labelledby="seen-today" className={card}>
             <h2 id="seen-today" className={cardTitle}>

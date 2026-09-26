@@ -5,15 +5,17 @@ import {
   NEEDS_REVIEW,
   consultationsPerDay,
   dashboardCounts,
+  followUpsThisWeek,
   pastNzDays,
+  resultsToChase,
   reviewQueue,
+  todaysTeam,
   type DashboardConsultation,
 } from "@/lib/dashboard/summary";
 import { getClinicianName } from "@/lib/data/notes";
 import { QueryError } from "@/lib/data/queries";
 import { listShifts } from "@/lib/data/roster";
-import { listTasks, toTask } from "@/lib/data/tasks";
-import { onShiftNow } from "@/lib/roster/logic";
+import { listClinicians, listTasks, toTask } from "@/lib/data/tasks";
 import { nzLocalToIso } from "@/lib/time";
 import type { ConsultationStatus } from "@/types/consultation";
 
@@ -39,16 +41,17 @@ export async function loadDashboard(supabase: Client, userId: string, now = new 
   const weekStart = nzLocalToIso(days[0], "00:00");
   const todayStart = nzLocalToIso(days[days.length - 1], "00:00");
 
-  const [myTasks, open, done, recent, waiting, shifts, name] = await Promise.all([
+  const [myTasks, openTasks, done, recent, waiting, shifts, name, clinicians] = await Promise.all([
     listTasks(supabase, "mine", userId),
-    supabase.from("tasks").select("*").eq("status", "open").limit(1000),
+    listTasks(supabase, "open", userId),
     supabase.from("tasks").select("*").eq("status", "done").gte("completed_at", todayStart).limit(1000),
     supabase.from("consultations").select(COLUMNS).gte("consulted_at", weekStart).limit(1000),
     supabase.from("consultations").select(COLUMNS).in("status", NEEDS_REVIEW).order("consulted_at").limit(50),
     listShifts(supabase, new Date(now.getTime() - 86_400_000), new Date(now.getTime() + 86_400_000)),
     getClinicianName(supabase, userId),
+    listClinicians(supabase),
   ]);
-  if (open.error || done.error || recent.error || waiting.error)
+  if (done.error || recent.error || waiting.error)
     throw new QueryError("Could not load the dashboard.");
 
   const byId = new Map(
@@ -58,11 +61,6 @@ export async function loadDashboard(supabase: Client, userId: string, now = new 
     ]),
   );
   const consultations = [...byId.values()];
-  const openTasks = open.data.map(toTask);
-  const t = now.getTime();
-  const laterToday = shifts
-    .filter((s) => Date.parse(s.startsAt) > t && Date.parse(s.startsAt) < t + 12 * 3_600_000)
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const todayDay = days[days.length - 1];
 
   return {
@@ -77,8 +75,11 @@ export async function loadDashboard(supabase: Client, userId: string, now = new 
       .slice(0, 8),
     week: consultationsPerDay(consultations, days),
     today: todayDay,
-    onShift: onShiftNow(shifts, now),
-    laterToday,
+    team: todaysTeam(shifts, todayStart, now),
+    results: resultsToChase(openTasks).slice(0, 8),
+    resultsTotal: resultsToChase(openTasks).length,
+    followUps: followUpsThisWeek(openTasks, now).slice(0, 8),
+    clinicians,
   };
 }
 

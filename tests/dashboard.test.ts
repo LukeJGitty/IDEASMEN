@@ -1,14 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   consultationsPerDay,
   dashboardCounts,
+  followUpsThisWeek,
   greeting,
+  isResultTask,
   pastNzDays,
+  resultsToChase,
   reviewQueue,
+  todaysTeam,
   type DashboardConsultation,
 } from "../lib/dashboard/summary";
 import { devInboxEnabled, devInboxUrl, extractCode, latestDevCode } from "../lib/dev-inbox";
+import { assertHostedUrl, parseClinicians } from "../scripts/seed-target";
+import { demoConditions, demoMedications, demoPatients } from "../scripts/demo-patients";
 
 // 10:00 on Saturday 26 September 2026 in New Zealand (NZST+1 = NZDT from 27 Sep).
 const now = new Date("2026-09-25T22:00:00Z");
@@ -141,4 +148,109 @@ test("the newest matching code is read from the local inbox", async () => {
     throw new Error("down");
   }) as unknown as typeof fetch;
   assert.equal(await latestDevCode("a@example.com", since, { fetchImpl: broken }), undefined);
+});
+
+
+const task = (id: string, title: string, dueAt?: string, patientId = `p-${id}`) => ({
+  id,
+  title,
+  dueAt,
+  patientId,
+  patientName: `Patient ${patientId}`,
+  status: "open" as const,
+});
+
+test("investigations are separated from other follow-ups", () => {
+  for (const title of ["Chase urine culture result tomorrow.", "Repeat HbA1c in three months.", "Book CXR", "Check FBC and CRP", "Book exercise tolerance test."])
+    assert.equal(isResultTask(title), true, title);
+  for (const title of ["Phone Hemi tomorrow to check breathing.", "Review in one week.", "Chase cardiology referral acknowledgement."])
+    assert.equal(isResultTask(title), false, title);
+  assert.deepEqual(
+    resultsToChase([task("1", "Chase bloods"), task("2", "Phone daughter"), { ...task("3", "X-ray knee"), status: "done" as const }]).map((t) => t.id),
+    ["1"],
+  );
+});
+
+test("follow-ups this week: one row per patient, soonest first, overdue flagged", () => {
+  const rows = followUpsThisWeek(
+    [
+      task("1", "Review in one week", "2026-09-30T00:00:00Z", "hemi"),
+      task("2", "Phone Hemi", "2026-09-26T05:00:00Z", "hemi"),
+      task("3", "Call family", "2026-09-24T00:00:00Z", "priya"), // overdue
+      task("4", "Recall in three months", "2026-12-25T00:00:00Z", "mei"), // too far
+      task("5", "Chase bloods", "2026-09-27T00:00:00Z", "sione"), // a result, not a follow-up
+      task("6", "Someday", undefined, "grace"),
+    ],
+    now,
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.patientId, r.next.id, r.count, r.overdue]),
+    [
+      ["priya", "3", 1, true],
+      ["hemi", "2", 2, false],
+    ],
+  );
+});
+
+test("today's team groups doctors and nurses and flags who is on now", () => {
+  const shift = (id: string, role: "doctor" | "nurse" | "reception", startsAt: string, endsAt: string) => ({
+    id,
+    staffName: `Staff ${id}`,
+    role,
+    area: "Ward",
+    startsAt,
+    endsAt,
+  });
+  const dayStart = "2026-09-25T12:00:00Z"; // midnight 26 Sep NZST
+  const team = todaysTeam(
+    [
+      shift("night", "nurse", "2026-09-25T11:00:00Z", "2026-09-25T19:30:00Z"), // 23:00 -> 07:30, finished
+      shift("early", "nurse", "2026-09-25T19:00:00Z", "2026-09-26T03:30:00Z"), // on now
+      shift("desk", "reception", "2026-09-25T20:45:00Z", "2026-09-26T01:15:00Z"),
+      shift("tomorrow", "doctor", "2026-09-26T20:00:00Z", "2026-09-27T05:00:00Z"), // not today
+    ],
+    dayStart,
+    now,
+  );
+  assert.deepEqual(team.nurses.map((s) => [s.id, s.onNow, s.finished]), [
+    ["night", false, true],
+    ["early", true, false],
+  ]);
+  assert.deepEqual(team.doctors, []);
+  assert.deepEqual(team.others.map((s) => s.id), ["desk"]);
+  assert.equal(team.onNowCount, 2);
+  assert.deepEqual(team.gaps, ["No doctor rostered today"]);
+});
+
+test("hosted seeding only accepts a supabase.co project and real clinician emails", () => {
+  assert.equal(assertHostedUrl("https://abcdefgh.supabase.co/"), "https://abcdefgh.supabase.co");
+  assert.throws(() => assertHostedUrl("http://abcdefgh.supabase.co"));
+  assert.throws(() => assertHostedUrl("https://127.0.0.1:55431"));
+  assert.throws(() => assertHostedUrl(undefined));
+  const one = parseClinicians("Ollie@Example.com:Dr Ollie Yates");
+  assert.deepEqual(one.a, { email: "ollie@example.com", fullName: "Dr Ollie Yates" });
+  assert.deepEqual(one.b, one.a);
+  assert.equal(parseClinicians("a@x.co, b@y.co:Dr B").b.fullName, "Dr B");
+  assert.throws(() => parseClinicians(""));
+  assert.throws(() => parseClinicians("not-an-email"));
+});
+
+
+test("hosted demo patients match supabase/seed.sql exactly", () => {
+  const sql = readFileSync(new URL("../supabase/seed.sql", import.meta.url), "utf8");
+  const section = (table: string) => sql.split(`insert into public.${table}`)[1].split(";")[0];
+  const rows = (table: string) => (section(table).match(/\n {2}\(/g) ?? []).length;
+  assert.equal(rows("patients"), demoPatients.length);
+  assert.equal(rows("medications"), demoMedications.length);
+  assert.equal(rows("medical_conditions"), demoConditions.length);
+  for (const p of demoPatients)
+    assert.ok(
+      section("patients").includes(`('${p.id}', '${p.first_name}', '${p.last_name}', '${p.date_of_birth}'`) &&
+        section("patients").includes(`'${p.nhi}')`),
+      `${p.first_name} differs from seed.sql`,
+    );
+  for (const m of demoMedications)
+    assert.ok(section("medications").includes(`('${m.patient_id}', '${m.name}', '${m.dose}', '${m.frequency}'`), m.name);
+  for (const c of demoConditions)
+    assert.ok(section("medical_conditions").includes(`('${c.patient_id}', '${c.condition}'`), c.condition);
 });

@@ -4,6 +4,9 @@ import { generateDraft } from "@/lib/data/notes";
 import { generateNoteRequestSchema } from "@/lib/validation";
 
 /** POST { consultationId } -> Consultation. The stored transcript is used, never one from the client. */
+// AI transcription and note drafting can take a while; allow up to 2 minutes on Vercel.
+export const maxDuration = 120;
+
 export async function POST(request: Request) {
   const auth = await authenticateClinician();
   if (!auth.ok) return apiError(auth.status);

@@ -9,6 +9,9 @@ import { NoteStep } from "@/components/consultation/note-step";
 import { getClinicianName } from "@/lib/data/notes";
 
 export const metadata = { title: "Consultation" };
+// AI transcription and note drafting can take a while; allow up to 2 minutes on Vercel.
+export const maxDuration = 120;
+
 
 export default async function ConsultationPage({
   params,

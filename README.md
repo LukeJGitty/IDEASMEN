@@ -87,6 +87,8 @@ Without environment configuration, the app shows setup guidance instead of a bro
 
 ## 4. Deploy your version
 
+**Hippo:** follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), which covers the database, demo data, AI keys and Vercel step by step. The steps below are the starter's generic version.
+
 Use a Supabase project dedicated to **your app**, never the SaaSathon event database. Creating hosted projects can have costs; use your team's approved account and plan.
 
 1. In your Supabase project, open **Connect** and copy the project URL and publishable key.

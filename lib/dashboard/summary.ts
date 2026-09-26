@@ -105,3 +105,94 @@ export function greeting(now = new Date()) {
   if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
+
+// ---------------------------------------------------------------------------
+// Doctor workflow panels: investigations to chase, follow-ups due, today's team.
+
+/** Tasks about tests, imaging or results that someone has to chase. */
+const RESULT =
+  /\b(bloods?|blood tests?|tests?|hba1c|fbc|lfts?|u ?& ?es?|crp|inr|x-?rays?|cxr|scans?|ct|mri|ultrasound|ecg|echo|swabs?|cultures?|urine|msu|biopsy|histology|results?|pathology|labs?|imaging)\b/i;
+
+export const isResultTask = (title: string) => RESULT.test(title);
+
+/** Open investigation tasks for the whole team, most urgent first (input is already sorted). */
+export function resultsToChase<T extends Pick<Task, "status" | "title">>(tasks: T[]) {
+  return tasks.filter((t) => t.status === "open" && isResultTask(t.title));
+}
+
+export interface FollowUpPatient<T> {
+  patientId: string;
+  patientName: string;
+  next: T;
+  count: number;
+  overdue: boolean;
+}
+
+/**
+ * Patients with a non-investigation task due in the next 7 days (or already overdue),
+ * one row per patient, soonest first.
+ */
+export function followUpsThisWeek<T extends Pick<Task, "status" | "title" | "dueAt" | "patientId"> & { patientName: string }>(
+  tasks: T[],
+  now = new Date(),
+): FollowUpPatient<T>[] {
+  const horizon = now.getTime() + 7 * 86_400_000;
+  const due = tasks
+    .filter((t) => t.status === "open" && t.dueAt && Date.parse(t.dueAt) <= horizon && !isResultTask(t.title))
+    .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
+  const byPatient = new Map<string, FollowUpPatient<T>>();
+  for (const task of due) {
+    const row = byPatient.get(task.patientId);
+    if (row) row.count++;
+    else
+      byPatient.set(task.patientId, {
+        patientId: task.patientId,
+        patientName: task.patientName,
+        next: task,
+        count: 1,
+        overdue: Date.parse(task.dueAt!) < now.getTime(),
+      });
+  }
+  return [...byPatient.values()];
+}
+
+export interface TeamShift {
+  id: string;
+  staffName: string;
+  role: "doctor" | "nurse" | "reception" | "other";
+  area: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+/**
+ * Everyone working at any point today (New Zealand day), grouped doctors, nurses, then
+ * everyone else, with whether they are on right now. Also flags a day with no doctor
+ * or no nurse rostered.
+ */
+export function todaysTeam<S extends TeamShift>(shifts: S[], dayStartIso: string, now = new Date()) {
+  const start = Date.parse(dayStartIso);
+  const end = start + 24 * 3_600_000;
+  const t = now.getTime();
+  const today = shifts
+    .filter((s) => Date.parse(s.startsAt) < end && Date.parse(s.endsAt) > start)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.staffName.localeCompare(b.staffName))
+    .map((s) => ({
+      ...s,
+      onNow: Date.parse(s.startsAt) <= t && t < Date.parse(s.endsAt),
+      finished: Date.parse(s.endsAt) <= t,
+    }));
+  const group = (roles: TeamShift["role"][]) => today.filter((s) => roles.includes(s.role));
+  const gaps = today.length
+    ? (["doctor", "nurse"] as const)
+        .filter((role) => !today.some((s) => s.role === role))
+        .map((role) => `No ${role} rostered today`)
+    : [];
+  return {
+    doctors: group(["doctor"]),
+    nurses: group(["nurse"]),
+    others: group(["reception", "other"]),
+    onNowCount: today.filter((s) => s.onNow).length,
+    gaps,
+  };
+}

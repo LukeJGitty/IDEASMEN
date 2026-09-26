@@ -1,16 +1,17 @@
 /**
- * Local-only demo data: consultations (finalised, in review, AI draft, just
+ * Demo data: consultations (finalised, in review, AI draft, just
  * transcribed), tasks (overdue, today, coming up, done) and a 7-day roster, all
  * relative to "now" so the demo always looks live. Fictional people only.
  *
- * Run after `pnpm db:reset` and `pnpm db:seed-users`:  pnpm db:seed-demo
+ * Local: run after `pnpm db:reset`:  pnpm db:seed-demo
+ * Hosted demo project: pnpm db:seed-hosted (see scripts/seed-target.ts and docs/DEPLOYMENT.md).
  * Safe to re-run: it replaces its own rows (fixed IDs) and leaves everything else.
  */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../lib/database.types";
 import { nzDays, nzLocalToIso } from "../lib/time";
+import { demoConditions, demoMedications, demoPatients } from "./demo-patients";
+import { ensureClinicians, resolveTarget } from "./seed-target";
 
 const P = (n: number) => `00000000-0000-4000-8000-00000000000${n}`; // seed.sql patients
 const id = (prefix: string, n: number) => `${prefix}000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -157,27 +158,35 @@ const tasks: {
 ];
 
 async function main() {
-  const local = JSON.parse(
-    execFileSync("pnpm", ["supabase", "status", "-o", "json"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }),
-  );
-  assert.equal(new URL(local.API_URL).hostname, "127.0.0.1", "Only the local Supabase stack is allowed");
-  const admin = createClient<Database>(local.API_URL, local.SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+  const target = resolveTarget();
+  const { admin } = target;
+  const doctors = await ensureClinicians(target);
 
-  const { data: users, error: usersError } = await admin.auth.admin.listUsers();
-  assert.equal(usersError, null);
-  const clinician = (email: string) => {
-    const user = users.users.find((u) => u.email === email);
-    assert.ok(user, `Run pnpm db:seed-users first (missing ${email}).`);
-    return user.id;
-  };
-  const doctors = { a: clinician("clinician.a@example.com"), b: clinician("clinician.b@example.com") };
-  const { data: patients } = await admin.from("patients").select("id").in("id", [1, 2, 3, 4, 5, 6, 7].map(P));
-  assert.equal(patients?.length, 7, "Run pnpm db:reset first so the demo patients exist.");
+  const demoPatientIds = demoPatients.map((p) => p.id!);
+  const { data: patients, error: patientsError } = await admin.from("patients").select("id").limit(1000);
+  assert.equal(patientsError, null, patientsError?.message);
+  const found = new Set((patients ?? []).map((p) => p.id));
+
+  if (target.hosted) {
+    // A hosted project never runs seed.sql, so load the same fictional patients here.
+    assert.ok(
+      [...found].every((pid) => demoPatientIds.includes(pid)),
+      "This hosted project has patients that are not demo patients. Refusing to seed demo data into it.",
+    );
+    const upserted = await admin.from("patients").upsert(demoPatients, { onConflict: "id" });
+    assert.equal(upserted.error, null, upserted.error?.message);
+    assert.equal((await admin.from("medications").delete().in("patient_id", demoPatientIds)).error, null);
+    assert.equal((await admin.from("medical_conditions").delete().in("patient_id", demoPatientIds)).error, null);
+    const meds = await admin.from("medications").insert(demoMedications);
+    assert.equal(meds.error, null, meds.error?.message);
+    const conditions = await admin.from("medical_conditions").insert(demoConditions);
+    assert.equal(conditions.error, null, conditions.error?.message);
+  } else {
+    assert.ok(
+      demoPatientIds.every((pid) => found.has(pid)),
+      "Run pnpm db:reset first so the demo patients exist.",
+    );
+  }
 
   const now = Date.now();
   const at = (hours: number) => new Date(now + hours * 3_600_000).toISOString();
@@ -225,8 +234,9 @@ async function main() {
   const doneIds = tasks.filter((t) => t.done).map((t) => id("da", t.n));
   assert.equal((await admin.from("tasks").update({ status: "done" }).in("id", doneIds)).error, null);
 
-  // Roster: weekdays fully staffed, Saturday short a nurse, Sunday closed, a doctor on call overnight,
-  // and one weekday with the nurses away so the coverage warning shows.
+  // Roster: the ward has nurses around the clock (early, late and night), clinic doctors
+  // and nurses on weekdays, a short Saturday clinic, a doctor on call every night, and
+  // one weekday with the clinic nurses away so the roster's coverage warning shows.
   const shifts: Database["public"]["Tables"]["roster_shifts"]["Insert"][] = [];
   const add = (day: string, staff: string, role: string, area: string, start: string, end: string) => {
     const startsAt = nzLocalToIso(day, start);
@@ -234,20 +244,32 @@ async function main() {
     if (endsAt <= startsAt) endsAt = new Date(Date.parse(endsAt) + 86_400_000).toISOString();
     shifts.push({ staff_name: staff, role, area, starts_at: startsAt, ends_at: endsAt, notes: "demo roster" });
   };
+  const wardNurses = ["Aroha Rangi", "Sofia Reyes", "Liam O'Connor", "Priya Shah", "Tavita Leota", "Emma Brown"];
   const days = nzDays(8, new Date(now - 86_400_000)); // yesterday + the next 7 days
+  const drA = target.clinicians.a.fullName;
+  const drB = target.clinicians.b.fullName === drA ? "Dr Demo Locum" : target.clinicians.b.fullName;
   days.forEach((day, i) => {
     const weekday = new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 = Sunday
-    add(day, "Dr Demo B", "doctor", "After-hours on call", "20:00", "08:00");
-    if (weekday === 0) return;
+    const nurse = (k: number) => wardNurses[(i * 3 + k) % wardNurses.length];
+    add(day, nurse(0), "nurse", "Ward, early", "07:00", "15:30");
+    add(day, nurse(1), "nurse", "Ward, late", "15:00", "23:30");
+    add(day, nurse(2), "nurse", "Ward, night", "23:00", "07:30");
+    add(day, drB, "doctor", "After-hours on call", "20:00", "08:00");
+    if (weekday === 0) {
+      add(day, drA, "doctor", "Weekend ward round", "08:00", "20:00");
+      return;
+    }
     if (weekday === 6) {
-      add(day, "Dr Demo B", "doctor", "Clinic", "09:00", "13:00");
+      add(day, drA, "doctor", "Weekend ward round", "08:00", "20:00");
+      add(day, drB, "doctor", "Clinic", "09:00", "13:00");
+      add(day, "Hana Kim", "nurse", "Treatment room", "09:00", "13:00");
       add(day, "Mele Tonga", "reception", "Front desk", "08:45", "13:15");
       return;
     }
-    add(day, "Dr Demo A", "doctor", "Clinic", "08:00", "17:00");
-    add(day, "Dr Demo B", "doctor", "Clinic", "12:00", "20:00");
+    add(day, drA, "doctor", "Clinic", "08:00", "17:00");
+    add(day, drB, "doctor", "Clinic", "12:00", "20:00");
     add(day, "Mele Tonga", "reception", "Front desk", "07:45", "16:15");
-    if (i === 4) return; // nurses away: coverage gap
+    if (i === 4) return; // clinic nurses away
     add(day, "Hana Kim", "nurse", "Treatment room", "08:00", "16:30");
     add(day, "Rawiri Te Awa", "nurse", "Treatment room", "12:00", "20:30");
   });
