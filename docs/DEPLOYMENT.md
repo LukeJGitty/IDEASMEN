@@ -82,6 +82,12 @@ On the Vercel address, on a phone and a laptop:
 4. Record a short consultation and check the transcript appears. Recordings up to about 18 minutes fit Vercel's 4.5 MB upload limit.
 5. Sign in with an email that is not a clinician and confirm it sees "not authorised".
 
+## Letting anyone try it (open demo)
+
+`pnpm db:open-demo-hosted on` lets anyone sign in with any email; they appear as **Dr Demo**, while people in `SEED_CLINICIANS` keep their names. `pnpm db:open-demo-hosted off` switches back and removes the Dr Demo accounts' access. It is off by default and never affects local development.
+
+While it is on, anyone can use the AI features on your OpenAI key and see and edit the fictional demo patients. Set a monthly budget in the OpenAI dashboard (Settings, Limits) and keep the "fictional patient data only" rule.
+
 ## Updating the database later
 
 When a new migration is merged (for example the referrals directory), run `pnpm supabase db push` from the IDEASMEN folder to apply it to the hosted project, then `pnpm db:seed-hosted` if you want the refreshed demo data.
