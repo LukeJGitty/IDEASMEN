@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiveRefresh } from "@/components/shared/live-refresh";
 import { TaskList } from "@/components/tasks/task-list";
 import { requireClinician } from "@/lib/auth";
 import { listClinicians, listTasks } from "@/lib/data/tasks";
@@ -28,8 +29,13 @@ export default async function TasksPage({
 
   return (
     <main id="main" className="mx-auto max-w-4xl px-5 py-10 lg:px-[30px]">
-      <p className="text-body-2 mb-3 text-hippo-900/80">TASK MANAGER</p>
-      <h1 className="text-h2 text-hippo-900">Tasks</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-body-2 mb-3 text-hippo-900/80">TASK MANAGER</p>
+          <h1 className="text-h2 text-hippo-900">Tasks</h1>
+        </div>
+        <LiveRefresh tables={["tasks"]} renderedAt={new Date().toISOString()} />
+      </div>
       <p className="mt-3 max-w-prose text-sm leading-6 text-charcoal">
         Follow-ups from finalised notes and tasks added by the team. Overdue work is always at the top.
       </p>

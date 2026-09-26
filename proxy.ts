@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig, isConfigured } from "@/lib/config";
 
 // API routes are refreshed here but answer 401/403 themselves, as JSON.
-const protectedPages = ["/ideas", "/patients", "/consultations", "/tasks", "/handover", "/roster"];
+const protectedPages = ["/dashboard", "/ideas", "/patients", "/consultations", "/tasks", "/handover", "/roster"];
 
 export async function proxy(request: NextRequest) {
   if (!isConfigured()) return NextResponse.next({ request });
@@ -38,6 +38,7 @@ export async function proxy(request: NextRequest) {
 }
 export const config = {
   matcher: [
+    "/dashboard/:path*",
     "/ideas/:path*",
     "/patients/:path*",
     "/consultations/:path*",

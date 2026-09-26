@@ -40,7 +40,7 @@ export async function verifyCode(
         "That code is invalid or expired. Request a new code and try again.",
     };
   revalidatePath("/", "layout");
-  redirect("/patients");
+  redirect("/dashboard");
 }
 
 export async function signOut() {

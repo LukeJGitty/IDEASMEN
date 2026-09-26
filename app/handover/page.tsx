@@ -5,6 +5,7 @@ import { requireClinician } from "@/lib/auth";
 import { loadHandover } from "@/lib/data/handover";
 import { listShifts } from "@/lib/data/roster";
 import { OnShiftNow } from "@/components/roster/on-shift-now";
+import { LiveRefresh } from "@/components/shared/live-refresh";
 import { onShiftNow } from "@/lib/roster/logic";
 
 export const dynamic = "force-dynamic";
@@ -48,8 +49,9 @@ export default async function HandoverPage({
             and tasks, so each line can be checked against the record.
           </p>
         </div>
-        <div className="print:hidden">
+        <div className="flex flex-col items-end gap-2 print:hidden">
           <PrintButton />
+          <LiveRefresh tables={["tasks", "consultations", "roster_shifts"]} renderedAt={new Date().toISOString()} />
         </div>
       </div>
 
