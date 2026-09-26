@@ -3,7 +3,9 @@
 import type { ClinicalNote } from "@/types/consultation";
 import type { Task } from "@/types/task";
 
-export const TIME_ZONE = "Pacific/Auckland";
+import { TIME_ZONE, nzDay, nzLocalToIso } from "@/lib/time";
+
+export { TIME_ZONE };
 
 export interface TaskSuggestion {
   title: string;
@@ -61,32 +63,10 @@ export function suggestTasks(note: Pick<ClinicalNote, "plan" | "followUp">, now 
   return out.slice(0, 20);
 }
 
-/** Offset of `zone` from UTC, in ms, at the given instant. */
-function zoneOffsetMs(instant: number, zone: string) {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: zone,
-      hourCycle: "h23",
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", second: "2-digit",
-    })
-      .formatToParts(new Date(instant))
-      .map((p) => [p.type, p.value]),
-  );
-  const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
-  return asUtc - Math.floor(instant / 1000) * 1000;
-}
-
 /** "2026-09-30" -> that date at 17:00 New Zealand time, as an ISO timestamp (handles NZST/NZDT). */
 export function nzDateToDue(date: string, hour = 17): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const guess = Date.UTC(y, m - 1, d, hour, 0, 0);
-  const first = guess - zoneOffsetMs(guess, TIME_ZONE);
-  return new Date(guess - zoneOffsetMs(first, TIME_ZONE)).toISOString();
+  return nzLocalToIso(date, `${String(hour).padStart(2, "0")}:00`);
 }
-
-const nzDay = (instant: Date) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(instant); // YYYY-MM-DD
 
 export type DueBucket = "overdue" | "today" | "upcoming" | "someday" | "done";
 

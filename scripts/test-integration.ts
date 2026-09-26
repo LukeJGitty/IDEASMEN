@@ -391,6 +391,61 @@ async function main() {
       .single();
     assert.equal(reopened!.completed_by, null, "Reopening clears the completion stamp");
     console.log("PASS: shared tasks, forged authorship and completion denied, no deletes");
+    // Roster: clinicians share and edit it; non-clinicians see nothing.
+    const { data: shift, error: shiftError } = await alice
+      .from("roster_shifts")
+      .insert({
+        staff_name: "Nurse Integration",
+        role: "nurse",
+        area: "Clinic",
+        starts_at: new Date().toISOString(),
+        ends_at: new Date(Date.now() + 8 * 3_600_000).toISOString(),
+      })
+      .select()
+      .single();
+    assert.equal(shiftError, null);
+    assert.equal(shift!.created_by, userIds[0]);
+    assert.equal(
+      (await bob.from("roster_shifts").select().eq("id", shift!.id)).data?.length,
+      1,
+      "Clinicians share the roster",
+    );
+    assert.equal(
+      (await carol.from("roster_shifts").select().eq("id", shift!.id)).data?.length,
+      0,
+      "Non-clinicians cannot read the roster",
+    );
+    await carol.from("roster_shifts").delete().eq("id", shift!.id);
+    assert.equal(
+      (await bob.from("roster_shifts").select().eq("id", shift!.id)).data?.length,
+      1,
+      "Non-clinicians cannot remove shifts",
+    );
+    assert.ok(
+      (
+        await alice.from("roster_shifts").insert({
+          staff_name: "Too long",
+          role: "nurse",
+          area: "Clinic",
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 30 * 3_600_000).toISOString(),
+        })
+      ).error,
+      "Shifts are at most 24 hours",
+    );
+    assert.equal((await bob.from("roster_shifts").delete().eq("id", shift!.id)).error, null);
+
+    // NHI: stored upper-case, unique, validated by the database.
+    const nhi = `ZZZ${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    assert.equal(
+      (await alice.from("patients").update({ nhi }).eq("id", patient!.id)).error,
+      null,
+    );
+    assert.ok(
+      (await alice.from("patients").update({ nhi: "not-an-nhi" }).eq("id", patient!.id)).error,
+      "Invalid NHIs are rejected",
+    );
+    console.log("PASS: shared roster, non-clinician denial, shift length limit, NHI validation");
 
     console.log(
       "PASS: clinician sharing, non-clinician and anonymous denial, forged authorship, immutable transcript, finalisation lock and private audio",
@@ -623,6 +678,16 @@ async function main() {
     const handoverPage = await (await request("/handover?hours=24")).text();
     assert.ok(handoverPage.includes(`Demo-${run}`), "Recently seen patients appear in the handover");
     console.log("PASS: task API, tasks page and handover page");
+    const { data: nhiPatient } = await admin.from("patients").select("nhi").eq("id", patientIds[0]).single();
+    response = await request(`/api/patients?q=${nhiPatient!.nhi!.toLowerCase()}`);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data[0]?.id, patientIds[0], "Search finds a patient by NHI");
+    response = await request(`/patients?q=${nhiPatient!.nhi}`);
+    assert.ok([303, 307, 308].includes(response.status), "An exact NHI opens the patient record");
+    assert.ok(response.headers.get("location")?.endsWith(`/patients/${patientIds[0]}`));
+    const rosterPage = await (await request("/roster")).text();
+    assert.ok(rosterPage.includes("On shift now"));
+    console.log("PASS: NHI search and redirect, roster page");
     assert.equal(
       (await request(`/api/patients?q=Demo-${run}`)).status,
       400,

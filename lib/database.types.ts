@@ -217,6 +217,7 @@ export type Database = {
           first_name: string;
           id: string;
           last_name: string;
+          nhi: string | null;
           phone: string | null;
           updated_at: string;
         };
@@ -228,6 +229,7 @@ export type Database = {
           first_name: string;
           id?: string;
           last_name: string;
+          nhi?: string | null;
           phone?: string | null;
           updated_at?: string;
         };
@@ -239,6 +241,7 @@ export type Database = {
           first_name?: string;
           id?: string;
           last_name?: string;
+          nhi?: string | null;
           phone?: string | null;
           updated_at?: string;
         };
@@ -262,6 +265,42 @@ export type Database = {
           full_name?: string;
           id?: string;
           is_clinician?: boolean;
+        };
+        Relationships: [];
+      };
+      roster_shifts: {
+        Row: {
+          area: string;
+          created_at: string;
+          created_by: string | null;
+          ends_at: string;
+          id: string;
+          notes: string | null;
+          role: string;
+          staff_name: string;
+          starts_at: string;
+        };
+        Insert: {
+          area?: string;
+          created_at?: string;
+          created_by?: string | null;
+          ends_at: string;
+          id?: string;
+          notes?: string | null;
+          role: string;
+          staff_name: string;
+          starts_at: string;
+        };
+        Update: {
+          area?: string;
+          created_at?: string;
+          created_by?: string | null;
+          ends_at?: string;
+          id?: string;
+          notes?: string | null;
+          role?: string;
+          staff_name?: string;
+          starts_at?: string;
         };
         Relationships: [];
       };

@@ -36,6 +36,13 @@ export default async function NewPatientPage() {
           <input id="dateOfBirth" name="dateOfBirth" type="date" className={fieldClass} required />
         </div>
 
+        <div>
+          <label htmlFor="nhi" className="mb-2 block text-sm font-medium">
+            NHI number <span className="font-normal text-charcoal">(optional)</span>
+          </label>
+          <input id="nhi" name="nhi" placeholder="e.g. ZZZ0016" maxLength={9} autoCapitalize="characters" className={`${fieldClass} font-mono uppercase`} />
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="email" className="mb-2 block text-sm font-medium">Email</label>

@@ -1,7 +1,8 @@
 import { PatientSearch } from "@/components/patients/patient-search";
 import { requireClinician } from "@/lib/auth";
 import { searchPatients } from "@/lib/data/queries";
-import { patientSearchSchema } from "@/lib/validation";
+import { redirect } from "next/navigation";
+import { idSchema, isNhi, patientSearchSchema } from "@/lib/validation";
 
 async function readQuery(searchParams?:
   | Promise<{ q?: string | string[] } | undefined>
@@ -25,6 +26,9 @@ export default async function PatientsPage({
   const query = await readQuery(searchParams);
   const parsed = patientSearchSchema.safeParse(query);
   const patients = parsed.success ? await searchPatients(supabase, parsed.data) : [];
+  // An exact NHI (or patient ID) match goes straight to the patient's record.
+  if (parsed.success && patients.length === 1 && (isNhi(parsed.data) || idSchema.safeParse(parsed.data).success))
+    redirect(`/patients/${patients[0].id}`);
 
   return (
     <>

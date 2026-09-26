@@ -48,6 +48,7 @@ test("rows map to domain types without leaking nulls", () => {
       date_of_birth: "1984-03-12",
       email: null,
       phone: "021",
+      nhi: "ZZZ0016",
       created_by: null,
       created_at: "",
       updated_at: "",
@@ -59,6 +60,7 @@ test("rows map to domain types without leaking nulls", () => {
       dateOfBirth: "1984-03-12",
       email: undefined,
       phone: "021",
+      nhi: "ZZZ0016",
     },
   );
   assert.equal(

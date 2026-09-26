@@ -19,6 +19,7 @@ export function toPatient(row: Tables<"patients">): Patient {
     dateOfBirth: row.date_of_birth,
     email: opt(row.email),
     phone: opt(row.phone),
+    nhi: opt(row.nhi),
   };
 }
 

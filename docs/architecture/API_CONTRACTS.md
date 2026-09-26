@@ -27,7 +27,7 @@ POST  /api/patients                       -> Patient                            
 PATCH /api/patients/:id                   -> Patient                                          [WS02]
 ```
 
-`q` accepts letters, spaces, hyphens, and apostrophes, or an exact patient UUID. Each word must match a first or last name.
+`q` accepts letters, spaces, hyphens, and apostrophes, an exact patient UUID, or an NHI (e.g. `ZZZ0016`, any case). Each word must match a first or last name. On the `/patients` page an exact NHI or UUID match opens the patient record directly. `POST`/`PATCH` accept an optional `nhi`.
 
 ## Consultations
 

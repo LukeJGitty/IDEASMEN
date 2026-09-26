@@ -22,6 +22,7 @@ export async function createPatient(form: FormData): Promise<void> {
     dateOfBirth: readString(form.get("dateOfBirth")),
     email: readString(form.get("email")),
     phone: readString(form.get("phone")),
+    nhi: readString(form.get("nhi")),
   });
   if (!parsed.success) throw new Error(parsed.error.issues[0].message);
   const { data, error } = await supabase
@@ -32,9 +33,11 @@ export async function createPatient(form: FormData): Promise<void> {
       date_of_birth: parsed.data.dateOfBirth,
       email: parsed.data.email,
       phone: parsed.data.phone,
+      nhi: parsed.data.nhi ?? null,
     })
     .select("id")
     .single();
+  if (error?.code === "23505") throw new Error("A patient with this NHI already exists.");
   if (error || !data) throw new Error("Could not create this patient.");
   revalidatePath("/patients");
   redirect(`/patients/${data.id}`);
@@ -50,6 +53,7 @@ export async function updatePatient(form: FormData): Promise<void> {
     dateOfBirth: readString(form.get("dateOfBirth")),
     email: readString(form.get("email")),
     phone: readString(form.get("phone")),
+    nhi: readString(form.get("nhi")),
   });
   if (!parsed.success) throw new Error(parsed.error.issues[0].message);
   const { data, error } = await supabase
@@ -60,10 +64,12 @@ export async function updatePatient(form: FormData): Promise<void> {
       date_of_birth: parsed.data.dateOfBirth,
       email: parsed.data.email,
       phone: parsed.data.phone,
+      nhi: parsed.data.nhi ?? null,
     })
     .eq("id", patientId.data)
     .select("id")
     .single();
+  if (error?.code === "23505") throw new Error("Another patient already has this NHI.");
   if (error || !data) throw new Error("Could not update this patient.");
   revalidatePath("/patients");
   revalidatePath(`/patients/${patientId.data}`);
