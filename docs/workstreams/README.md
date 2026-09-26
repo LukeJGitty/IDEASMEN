@@ -43,7 +43,9 @@ pnpm db:seed-demo             # fictional consultations, tasks and a 7-day roste
 pnpm dev
 ```
 
-Sign in at http://localhost:3000/login as `clinician.a@example.com`. The code arrives in the local inbox at http://127.0.0.1:55434.
+Sign in at http://localhost:3000/login as `clinician.a@example.com`. In local development the code pops up on the sign-in page (and as a desktop notification if you allow it) and fills itself in. It is read from the local inbox at http://127.0.0.1:55434, which you can still open directly. The pop-up is off in production builds, with a hosted Supabase project, when the page is opened from another device, or with `DEV_CODE_POPUP=off`.
+
+After sign-in you land on the **shift dashboard** (`/dashboard`): your overdue and due-today tasks (tick them off in place), notes waiting for review, who is on shift, patients seen today and the week's consultations. The dashboard, Tasks and Handover update live through Supabase Realtime (migration `20260926020000_realtime.sql`), refresh when the tab regains focus, and poll once a minute as a fallback. Press `/` (or Ctrl/Cmd + K) anywhere to jump to the patient and NHI search.
 
 To check you're connected, open http://localhost:3000/api/patients in the same browser. It should return the three seed patients as JSON.
 

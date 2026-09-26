@@ -3,6 +3,7 @@ import { LoginForm } from "@/components/login-form";
 import { HippoLogo, HippoMark } from "@/components/shared/hippo-logo";
 import { SetupNotice } from "@/components/setup-notice";
 import { isConfigured } from "@/lib/config";
+import { devInboxEnabled } from "@/lib/dev-inbox";
 import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign in" };
@@ -11,7 +12,7 @@ export default async function LoginPage() {
   if (configured) {
     const supabase = await createClient();
     const { data } = await supabase.auth.getClaims();
-    if (data?.claims.sub) redirect("/patients");
+    if (data?.claims.sub) redirect("/dashboard");
   }
   return (
     <main
@@ -51,7 +52,7 @@ export default async function LoginPage() {
           <p className="mt-3 mb-8 text-sm leading-6 text-charcoal">
             We’ll email you a code. No password needed.
           </p>
-          {configured ? <LoginForm /> : <SetupNotice />}
+          {configured ? <LoginForm devCodes={devInboxEnabled()} /> : <SetupNotice />}
         </div>
       </section>
     </main>

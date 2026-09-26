@@ -2,15 +2,19 @@ import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 import { HippoLogo } from "@/components/shared/hippo-logo";
+import { SearchShortcut } from "@/components/shared/search-shortcut";
 
-/** Shared top bar for every signed-in clinical page (patients and consultations). */
+/** Shared top bar for every signed-in clinical page. Press "/" to jump to the search. */
 export function AppHeader({ email, openTasks = 0 }: { email: string; openTasks?: number }) {
   return (
     <header className="border-b border-hippo-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-[30px]">
         <nav aria-label="Main" className="flex flex-wrap items-center gap-5">
-          <Link href="/patients" aria-label="Hippo home">
+          <Link href="/dashboard" aria-label="Hippo dashboard">
             <HippoLogo className="text-lg" />
+          </Link>
+          <Link href="/dashboard" className="text-sm font-medium text-hippo-900 underline-offset-4 hover:underline">
+            Dashboard
           </Link>
           <Link href="/patients" className="text-sm font-medium text-hippo-900 underline-offset-4 hover:underline">
             Patients
@@ -33,6 +37,7 @@ export function AppHeader({ email, openTasks = 0 }: { email: string; openTasks?:
             New patient
           </Link>
         </nav>
+        <SearchShortcut />
         <form action="/patients" method="get" role="search" className="order-last w-full sm:order-none sm:w-auto">
           <label htmlFor="header-search" className="sr-only">
             Find a patient by name or NHI
@@ -40,7 +45,8 @@ export function AppHeader({ email, openTasks = 0 }: { email: string; openTasks?:
           <input
             id="header-search"
             name="q"
-            placeholder="Find patient or NHI"
+            placeholder="Find patient or NHI (/)"
+            aria-keyshortcuts="/"
             className="w-full rounded-full border border-hippo-200 bg-hippo-50 px-4 py-1.5 text-sm placeholder:text-charcoal/60 focus-visible:outline-2 focus-visible:outline-hippo-600 sm:w-56"
           />
         </form>

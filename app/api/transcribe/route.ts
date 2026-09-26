@@ -6,6 +6,9 @@ import { audioExtension, baseMimeType, transcribeSchema } from "@/lib/validation
 import { transcribe } from "@/services/transcription";
 
 const bucket = "consultation-audio";
+// AI transcription and note drafting can take a while; allow up to 2 minutes on Vercel.
+export const maxDuration = 120;
+
 const retryMessage =
   "Transcription failed. The recording is saved, so you can retry without recording again.";
 
