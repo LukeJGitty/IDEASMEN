@@ -26,6 +26,8 @@ The write rules live in one place, `lib/data/notes.ts`, which both the routes an
 
 **Switching to Claude:** set `NOTE_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` in `.env.local` (server-only), after the owner approves spend. `ANTHROPIC_MODEL` is optional.
 
+**Switching to OpenAI:** set `NOTE_PROVIDER=openai` and `OPENAI_API_KEY` in `.env.local` (server-only, the same key as `TRANSCRIPTION_PROVIDER=openai`), after the owner approves spend. `OPENAI_NOTE_MODEL` is optional (default `gpt-6-luna`). The provider lives in `lib/notes/openai.ts`: Chat Completions with a strict JSON schema, and the reply is re-validated with `clinicalNoteSchema` like every other provider. Tests: `tests/openai-notes.test.ts`.
+
 ## Builds on (from WS01)
 
 - `clinicalNoteSchema` and the `ClinicalNote` type. The draft and the final note use the same shape.

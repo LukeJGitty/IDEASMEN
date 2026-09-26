@@ -4,7 +4,7 @@ import { audioExtension, baseMimeType } from "@/lib/validation";
 
 export class ProviderError extends Error {}
 
-export const DEFAULT_OPENAI_TRANSCRIBE_MODEL = "gpt-4o-transcribe";
+export const DEFAULT_OPENAI_TRANSCRIBE_MODEL = "gpt-transcribe";
 
 // Nudges spelling of clinical and NZ terms. The prompt is guidance, not text to insert.
 const VOCABULARY_HINT =
