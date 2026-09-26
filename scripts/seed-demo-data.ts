@@ -8,9 +8,9 @@
  * Safe to re-run: it replaces its own rows (fixed IDs) and leaves everything else.
  */
 import assert from "node:assert/strict";
-import type { Database, Json } from "../lib/database.types";
-import { nzDays, nzLocalToIso } from "../lib/time";
+import type { Json } from "../lib/database.types";
 import { demoConditions, demoMedications, demoPatients } from "./demo-patients";
+import { buildDemoRoster } from "./demo-roster";
 import { ensureClinicians, resolveTarget } from "./seed-target";
 
 const P = (n: number) => `00000000-0000-4000-8000-00000000000${n}`; // seed.sql patients
@@ -234,45 +234,7 @@ async function main() {
   const doneIds = tasks.filter((t) => t.done).map((t) => id("da", t.n));
   assert.equal((await admin.from("tasks").update({ status: "done" }).in("id", doneIds)).error, null);
 
-  // Roster: the ward has nurses around the clock (early, late and night), clinic doctors
-  // and nurses on weekdays, a short Saturday clinic, a doctor on call every night, and
-  // one weekday with the clinic nurses away so the roster's coverage warning shows.
-  const shifts: Database["public"]["Tables"]["roster_shifts"]["Insert"][] = [];
-  const add = (day: string, staff: string, role: string, area: string, start: string, end: string) => {
-    const startsAt = nzLocalToIso(day, start);
-    let endsAt = nzLocalToIso(day, end);
-    if (endsAt <= startsAt) endsAt = new Date(Date.parse(endsAt) + 86_400_000).toISOString();
-    shifts.push({ staff_name: staff, role, area, starts_at: startsAt, ends_at: endsAt, notes: "demo roster" });
-  };
-  const wardNurses = ["Aroha Rangi", "Sofia Reyes", "Liam O'Connor", "Priya Shah", "Tavita Leota", "Emma Brown"];
-  const days = nzDays(8, new Date(now - 86_400_000)); // yesterday + the next 7 days
-  const drA = target.clinicians.a.fullName;
-  const drB = target.clinicians.b.fullName === drA ? "Dr Demo Locum" : target.clinicians.b.fullName;
-  days.forEach((day, i) => {
-    const weekday = new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 = Sunday
-    const nurse = (k: number) => wardNurses[(i * 3 + k) % wardNurses.length];
-    add(day, nurse(0), "nurse", "Ward, early", "07:00", "15:30");
-    add(day, nurse(1), "nurse", "Ward, late", "15:00", "23:30");
-    add(day, nurse(2), "nurse", "Ward, night", "23:00", "07:30");
-    add(day, drB, "doctor", "After-hours on call", "20:00", "08:00");
-    if (weekday === 0) {
-      add(day, drA, "doctor", "Weekend ward round", "08:00", "20:00");
-      return;
-    }
-    if (weekday === 6) {
-      add(day, drA, "doctor", "Weekend ward round", "08:00", "20:00");
-      add(day, drB, "doctor", "Clinic", "09:00", "13:00");
-      add(day, "Hana Kim", "nurse", "Treatment room", "09:00", "13:00");
-      add(day, "Mele Tonga", "reception", "Front desk", "08:45", "13:15");
-      return;
-    }
-    add(day, drA, "doctor", "Clinic", "08:00", "17:00");
-    add(day, drB, "doctor", "Clinic", "12:00", "20:00");
-    add(day, "Mele Tonga", "reception", "Front desk", "07:45", "16:15");
-    if (i === 4) return; // clinic nurses away
-    add(day, "Hana Kim", "nurse", "Treatment room", "08:00", "16:30");
-    add(day, "Rawiri Te Awa", "nurse", "Treatment room", "12:00", "20:30");
-  });
+  const shifts = buildDemoRoster(target.clinicians, now);
   const { error: rosterError } = await admin.from("roster_shifts").insert(shifts);
   assert.equal(rosterError, null, rosterError?.message);
 

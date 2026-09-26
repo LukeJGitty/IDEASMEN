@@ -9,6 +9,7 @@
  *   SEED_SUPABASE_URL=https://<project-ref>.supabase.co
  *   SEED_SUPABASE_SERVICE_ROLE_KEY=<secret key from Project Settings, API Keys>
  *   SEED_CLINICIANS=you@example.com:Dr Your Name,teammate@example.com:Dr Their Name
+ * Add ":no-roster" after a name to give that person a login but keep them off the roster.
  * Hosted codes are really emailed, so use your team's real email addresses.
  */
 import assert from "node:assert/strict";
@@ -19,6 +20,8 @@ import type { Database } from "../lib/database.types";
 export interface SeedClinician {
   email: string;
   fullName: string;
+  /** Appears on the demo roster (false when listed as "email:Name:no-roster"). */
+  roster: boolean;
 }
 
 export interface SeedTarget {
@@ -28,8 +31,8 @@ export interface SeedTarget {
   clinicians: { a: SeedClinician; b: SeedClinician; all: SeedClinician[] };
 }
 
-const LOCAL_A = { email: "clinician.a@example.com", fullName: "Dr Demo A" };
-const LOCAL_B = { email: "clinician.b@example.com", fullName: "Dr Demo B" };
+const LOCAL_A = { email: "clinician.a@example.com", fullName: "Dr Demo A", roster: true };
+const LOCAL_B = { email: "clinician.b@example.com", fullName: "Dr Demo B", roster: true };
 const LOCAL_CLINICIANS = { a: LOCAL_A, b: LOCAL_B, all: [LOCAL_A, LOCAL_B] };
 
 /**
@@ -42,10 +45,12 @@ export function parseClinicians(value: string | undefined): SeedTarget["clinicia
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => {
-      const [email, ...name] = entry.split(":");
+      const [email, ...parts] = entry.split(":");
       const clean = email.trim().toLowerCase();
       assert.match(clean, /^[^@\s]+@[^@\s]+\.[^@\s]+$/, `Not an email address: ${email}`);
-      return { email: clean, fullName: name.join(":").trim() || clean.split("@")[0] };
+      const offRoster = parts.length > 0 && /^\s*no-?roster\s*$/i.test(parts[parts.length - 1]);
+      const name = (offRoster ? parts.slice(0, -1) : parts).join(":").trim();
+      return { email: clean, fullName: name || clean.split("@")[0], roster: !offRoster };
     });
   assert.ok(list.length > 0, "Set SEED_CLINICIANS to at least one real email address (see scripts/seed-target.ts).");
   const unique = list.filter((c, i) => list.findIndex((d) => d.email === c.email) === i);

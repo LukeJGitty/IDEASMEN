@@ -51,7 +51,7 @@ To send codes to anyone, and more often, add your own email sender under **Authe
 
 3. Run `pnpm db:seed-hosted`. It loads the 8 fictional patients, consultations, tasks and a week of roster (doctors and round-the-clock ward nurses), timed relative to now. Re-run it any time to refresh the demo. It refuses to run against a project that contains non-demo patients.
 
-   Everyone listed in `SEED_CLINICIANS` becomes a clinician; the first two own the demo consultations and tasks. To add people later without touching any data, add them to `SEED_CLINICIANS` and run `pnpm db:clinicians-hosted`.
+   Everyone listed in `SEED_CLINICIANS` becomes a clinician; the first two own the demo consultations and tasks. To add people later without touching any data, add them to `SEED_CLINICIANS` and run `pnpm db:clinicians-hosted`. Add `:no-roster` after someone's name (for example `mel@example.com:Dr Mel Yates:no-roster`) to give them a login but keep them off the roster. Everyone else beyond the first two gets an evening clinic shift from 4pm; run `pnpm db:roster-hosted` to rebuild just the roster.
 
 ## 3. Deploy the website (Vercel)
 

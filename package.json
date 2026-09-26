@@ -19,6 +19,8 @@
     "db:seed-users": "tsx scripts/seed-demo-users.ts",
     "db:seed-demo": "tsx scripts/seed-demo-data.ts",
     "db:seed-hosted": "tsx --env-file=.env.seed.local scripts/seed-demo-data.ts --hosted",
+    "db:roster": "tsx scripts/seed-roster.ts",
+    "db:roster-hosted": "tsx --env-file=.env.seed.local scripts/seed-roster.ts --hosted",
     "db:clinicians-hosted": "tsx --env-file=.env.seed.local scripts/seed-demo-users.ts --hosted",
     "db:types": "supabase gen types typescript --local > lib/database.types.ts"
   },
