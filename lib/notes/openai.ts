@@ -1,6 +1,7 @@
 // OpenAI clinical-note provider, free of secrets and `server-only` so it can be unit-tested
 // with a fake fetch. Uses Chat Completions with a strict JSON schema, then re-validates the
 // result against clinicalNoteSchema exactly like the Claude provider does.
+import { openAIErrorReason } from "@/lib/openai-errors";
 import {
   NOTE_SYSTEM_PROMPT,
   NoteGenerationError,
@@ -69,8 +70,7 @@ export async function generateNoteWithOpenAI(
     throw new NoteGenerationError("The note service is unavailable. Try again shortly.");
   }
   // Error bodies can echo request content, so only the status is surfaced.
-  if (!response.ok)
-    throw new NoteGenerationError(`The note service returned ${response.status}. Try again shortly.`);
+  if (!response.ok) throw new NoteGenerationError(await openAIErrorReason(response, "OPENAI_NOTE_MODEL"));
   const json = (await response.json().catch(() => null)) as {
     choices?: { message?: { content?: string | null; refusal?: string | null } }[];
   } | null;

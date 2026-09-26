@@ -3,7 +3,7 @@ import { apiData, apiError, handleApi } from "@/lib/api";
 import { getConsultation } from "@/lib/data/queries";
 import { toConsultation } from "@/lib/data/mappers";
 import { audioExtension, baseMimeType, transcribeSchema } from "@/lib/validation";
-import { transcribe } from "@/services/transcription";
+import { TranscriptionError, transcribe } from "@/services/transcription";
 
 const bucket = "consultation-audio";
 // AI transcription and note drafting can take a while; allow up to 2 minutes on Vercel.
@@ -72,8 +72,12 @@ export async function POST(request: Request) {
     let text: string;
     try {
       text = (await transcribe(recording)).text.trim();
-    } catch {
-      return apiError(502, retryMessage);
+    } catch (error) {
+      // TranscriptionError messages are written for people and never contain the key,
+      // the audio or the provider's error text, so they are safe to show and log.
+      const reason = error instanceof TranscriptionError ? error.message : "";
+      console.error(`[transcribe] ${reason || "unexpected error"}`);
+      return apiError(502, reason ? `${retryMessage} Reason: ${reason}` : retryMessage);
     }
     if (!text) return apiError(502, retryMessage);
 

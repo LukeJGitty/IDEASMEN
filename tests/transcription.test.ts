@@ -58,3 +58,23 @@ test("provider settings are forgiving of spaces, quotes, capitals and comments",
   assert.equal(isSampleTranscript(`\n${MOCK_TRANSCRIPT}\n`), true);
   assert.equal(isSampleTranscript("Patient: my knee hurts."), false);
 });
+
+import { explainOpenAIError, openAIErrorReason } from "../lib/openai-errors";
+
+test("OpenAI errors are explained in plain words without echoing the request", async () => {
+  assert.match(explainOpenAIError(401), /rejected the API key/);
+  assert.match(explainOpenAIError(429, "insufficient_quota"), /no credit/);
+  assert.match(explainOpenAIError(429), /rate-limiting/);
+  assert.match(explainOpenAIError(404, undefined, undefined, "OPENAI_TRANSCRIBE_MODEL"), /Remove OPENAI_TRANSCRIBE_MODEL/);
+  assert.match(explainOpenAIError(400, "unsupported_parameter", "language"), /setting: language/);
+  const reason = await openAIErrorReason(
+    Response.json(
+      { error: { message: "Patient said: my chest hurts", code: "insufficient_quota", param: "patient said x" } },
+      { status: 429 },
+    ),
+  );
+  assert.match(reason, /no credit/);
+  assert.doesNotMatch(reason, /chest|Patient/);
+  const bad = await openAIErrorReason(Response.json({ error: { param: "<script>" } }, { status: 400 }));
+  assert.doesNotMatch(bad, /script/);
+});

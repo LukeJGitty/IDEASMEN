@@ -1,6 +1,7 @@
 // Referral letters: the prompt, an offline template and the OpenAI call. The AI only
 // writes the clinical body from de-identified facts; names, NHI and date of birth are
 // added by Hippo around it, so they are never sent to a model provider.
+import { openAIErrorReason } from "@/lib/openai-errors";
 import type { ClinicalNote } from "@/types/consultation";
 import type { Medication } from "@/types/medication";
 import type { MedicalCondition } from "@/types/patient";
@@ -160,7 +161,7 @@ export async function letterBodyWithOpenAI(
     throw new LetterError("The letter service is unavailable. Try again shortly.");
   }
   // Error bodies can echo request content, so only the status is surfaced.
-  if (!response.ok) throw new LetterError(`The letter service returned ${response.status}. Try again shortly.`);
+  if (!response.ok) throw new LetterError(await openAIErrorReason(response, "OPENAI_NOTE_MODEL"));
   const json = (await response.json().catch(() => null)) as {
     choices?: { message?: { content?: string | null; refusal?: string | null } }[];
   } | null;

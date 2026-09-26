@@ -1,5 +1,6 @@
 // OpenAI speech-to-text, kept free of secrets and `server-only` so it can be unit-tested
 // with a fake fetch. services/transcription.ts supplies the key and chooses the provider.
+import { openAIErrorReason } from "@/lib/openai-errors";
 import { audioExtension, baseMimeType } from "@/lib/validation";
 
 export class ProviderError extends Error {}
@@ -46,9 +47,8 @@ export async function transcribeWithOpenAI(
   } catch {
     throw new ProviderError("The transcription service could not be reached.");
   }
-  // Provider error bodies can echo request details, so only the status is surfaced.
   if (!response.ok)
-    throw new ProviderError(`The transcription service returned ${response.status}.`);
+    throw new ProviderError(await openAIErrorReason(response, "OPENAI_TRANSCRIBE_MODEL"));
 
   const json: unknown = await response.json().catch(() => null);
   const text =
