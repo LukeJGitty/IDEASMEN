@@ -13,6 +13,8 @@ import { requireClinician } from "@/lib/auth";
 import { getPatientRecord, listConsultations } from "@/lib/data/queries";
 import { listClinicians, listPatientTasks } from "@/lib/data/tasks";
 import { PatientTasks } from "@/components/tasks/patient-tasks";
+import { ReferralList } from "@/components/referrals/referral-list";
+import { listReferrals } from "@/lib/data/referrals";
 import { idSchema } from "@/lib/validation";
 
 export default async function PatientDashboardPage({
@@ -26,10 +28,11 @@ export default async function PatientDashboardPage({
 
   const record = await getPatientRecord(supabase, patientId.data);
   if (!record) notFound();
-  const [consultations, tasks, clinicians] = await Promise.all([
+  const [consultations, tasks, clinicians, referrals] = await Promise.all([
     listConsultations(supabase, patientId.data),
     listPatientTasks(supabase, patientId.data),
     listClinicians(supabase),
+    listReferrals(supabase, { patientId: patientId.data, limit: 20 }),
   ]);
 
   return (
@@ -47,10 +50,15 @@ export default async function PatientDashboardPage({
                 {record.patient.nhi ? `NHI ${record.patient.nhi}` : "No NHI recorded"}
               </p>
             </div>
-            <form action={createConsultation}>
-              <input type="hidden" name="patientId" value={record.patient.id} />
-              <Button type="submit">New consultation</Button>
-            </form>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/patients/${record.patient.id}/refer`}>Make a referral</Link>
+              </Button>
+              <form action={createConsultation}>
+                <input type="hidden" name="patientId" value={record.patient.id} />
+                <Button type="submit">New consultation</Button>
+              </form>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -130,6 +138,20 @@ export default async function PatientDashboardPage({
             currentUserId={userId}
           />
         </div>
+
+        <section aria-labelledby="patient-referrals" className="rounded-[20px] border border-black/10 bg-white p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="patient-referrals" className="text-xl font-semibold">
+              Referrals
+            </h2>
+            <Link href={`/patients/${record.patient.id}/refer`} className="text-sm text-hippo-600 hover:underline">
+              Make a referral
+            </Link>
+          </div>
+          <div className="mt-2">
+            <ReferralList referrals={referrals} showPatient={false} empty="No referrals for this patient." />
+          </div>
+        </section>
       </main>
     </>
   );

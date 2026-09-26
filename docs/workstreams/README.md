@@ -111,3 +111,7 @@ These are owned by WS01. Changing one breaks other workstreams, so raise it firs
 - New tables or policies come with a migration, explicit grants, RLS, and a two-account access check in `scripts/test-integration.ts`.
 - Provider API keys stay server-side. No paid provider is enabled without the owner's approval (see `AGENTS.md`).
 - Only fictional patient data is used.
+
+## Referrals
+
+**Referrals** (header) lists 17 real Canterbury providers (public and private) with address, phone, hours, ACC funding and any published prices. Providers don't publish wait times, so waits start as labelled estimates; any clinician can update availability on the card, and the database stamps who and when. From a patient's record, **Make a referral** suggests the service from the latest note's plan, compares facilities by wait or cost, drafts the letter with the note provider (the AI never sees the name, NHI or date of birth; Hippo adds those), and on save creates a task to chase the acknowledgement. Marking the referral acknowledged, seen or cancelled ticks that task off. Migration: `20260927000000_referrals.sql`. Tests: `tests/referrals.test.ts`.

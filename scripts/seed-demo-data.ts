@@ -8,9 +8,10 @@
  * Safe to re-run: it replaces its own rows (fixed IDs) and leaves everything else.
  */
 import assert from "node:assert/strict";
-import type { Database, Json } from "../lib/database.types";
-import { nzDays, nzLocalToIso } from "../lib/time";
+import type { Json } from "../lib/database.types";
 import { demoConditions, demoMedications, demoPatients } from "./demo-patients";
+import { buildDemoRoster } from "./demo-roster";
+import { composeLetter, mockLetterBody } from "../lib/referrals/letter";
 import { ensureClinicians, resolveTarget } from "./seed-target";
 
 const P = (n: number) => `00000000-0000-4000-8000-00000000000${n}`; // seed.sql patients
@@ -193,6 +194,8 @@ async function main() {
 
   // Replace this script's own rows only.
   const taskIds = tasks.map((t) => id("da", t.n));
+  const demoReferralId = id("db", 1);
+  assert.equal((await admin.from("referrals").delete().eq("id", demoReferralId)).error, null);
   const consultationIds = consultations.map((c) => id("dc", c.n));
   assert.equal((await admin.from("tasks").delete().in("id", taskIds)).error, null);
   assert.equal((await admin.from("consultations").delete().in("id", consultationIds)).error, null);
@@ -234,45 +237,44 @@ async function main() {
   const doneIds = tasks.filter((t) => t.done).map((t) => id("da", t.n));
   assert.equal((await admin.from("tasks").update({ status: "done" }).in("id", doneIds)).error, null);
 
-  // Roster: the ward has nurses around the clock (early, late and night), clinic doctors
-  // and nurses on weekdays, a short Saturday clinic, a doctor on call every night, and
-  // one weekday with the clinic nurses away so the roster's coverage warning shows.
-  const shifts: Database["public"]["Tables"]["roster_shifts"]["Insert"][] = [];
-  const add = (day: string, staff: string, role: string, area: string, start: string, end: string) => {
-    const startsAt = nzLocalToIso(day, start);
-    let endsAt = nzLocalToIso(day, end);
-    if (endsAt <= startsAt) endsAt = new Date(Date.parse(endsAt) + 86_400_000).toISOString();
-    shifts.push({ staff_name: staff, role, area, starts_at: startsAt, ends_at: endsAt, notes: "demo roster" });
-  };
-  const wardNurses = ["Aroha Rangi", "Sofia Reyes", "Liam O'Connor", "Priya Shah", "Tavita Leota", "Emma Brown"];
-  const days = nzDays(8, new Date(now - 86_400_000)); // yesterday + the next 7 days
-  const drA = target.clinicians.a.fullName;
-  const drB = target.clinicians.b.fullName === drA ? "Dr Demo Locum" : target.clinicians.b.fullName;
-  days.forEach((day, i) => {
-    const weekday = new Date(`${day}T12:00:00Z`).getUTCDay(); // 0 = Sunday
-    const nurse = (k: number) => wardNurses[(i * 3 + k) % wardNurses.length];
-    add(day, nurse(0), "nurse", "Ward, early", "07:00", "15:30");
-    add(day, nurse(1), "nurse", "Ward, late", "15:00", "23:30");
-    add(day, nurse(2), "nurse", "Ward, night", "23:00", "07:30");
-    add(day, drB, "doctor", "After-hours on call", "20:00", "08:00");
-    if (weekday === 0) {
-      add(day, drA, "doctor", "Weekend ward round", "08:00", "20:00");
-      return;
-    }
-    if (weekday === 6) {
-      add(day, drA, "doctor", "Weekend ward round", "08:00", "20:00");
-      add(day, drB, "doctor", "Clinic", "09:00", "13:00");
-      add(day, "Hana Kim", "nurse", "Treatment room", "09:00", "13:00");
-      add(day, "Mele Tonga", "reception", "Front desk", "08:45", "13:15");
-      return;
-    }
-    add(day, drA, "doctor", "Clinic", "08:00", "17:00");
-    add(day, drB, "doctor", "Clinic", "12:00", "20:00");
-    add(day, "Mele Tonga", "reception", "Front desk", "07:45", "16:15");
-    if (i === 4) return; // clinic nurses away
-    add(day, "Hana Kim", "nurse", "Treatment room", "08:00", "16:30");
-    add(day, "Rawiri Te Awa", "nurse", "Treatment room", "12:00", "20:30");
+  // One referral already in flight: Jack's cardiology referral, chased by task 7.
+  const jack = demoPatients.find((p) => p.id === P(6))!;
+  const jackNote = consultations.find((c) => c.n === 5)!.draft!;
+  const { error: referralError } = await admin.from("referrals").insert({
+    id: demoReferralId,
+    patient_id: P(6),
+    consultation_id: id("dc", 5),
+    facility_id: "f0000000-0000-4000-8000-000000000011", // Christchurch Heart Group
+    service: "cardiology",
+    urgency: "soon",
+    reason: "Exertional chest tightness, possible stable angina. ECG normal.",
+    letter: composeLetter({
+      facilityName: "Christchurch Heart Group",
+      service: "cardiology",
+      urgency: "soon",
+      patientName: `${jack.first_name} ${jack.last_name}`,
+      dateOfBirth: jack.date_of_birth,
+      nhi: jack.nhi ?? undefined,
+      body: mockLetterBody({
+        facilityName: "Christchurch Heart Group",
+        service: "cardiology",
+        urgency: "soon",
+        reason: "Exertional chest tightness, possible stable angina. ECG normal.",
+        age: 45,
+        note: jackNote,
+        medications: [],
+        conditions: [],
+      }),
+      clinicianName: target.clinicians.a.fullName,
+      date: new Date(now - 72 * 3_600_000),
+    }),
+    task_id: id("da", 7),
+    created_by: doctors.a,
+    created_at: at(-72),
   });
+  assert.equal(referralError, null, referralError?.message);
+
+  const shifts = buildDemoRoster(target.clinicians, now);
   const { error: rosterError } = await admin.from("roster_shifts").insert(shifts);
   assert.equal(rosterError, null, rosterError?.message);
 

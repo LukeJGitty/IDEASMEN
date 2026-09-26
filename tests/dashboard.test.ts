@@ -14,6 +14,7 @@ import {
   type DashboardConsultation,
 } from "../lib/dashboard/summary";
 import { devInboxEnabled, devInboxUrl, extractCode, latestDevCode } from "../lib/dev-inbox";
+import { buildDemoRoster } from "../scripts/demo-roster";
 import { assertHostedUrl, parseClinicians } from "../scripts/seed-target";
 import { demoConditions, demoMedications, demoPatients } from "../scripts/demo-patients";
 
@@ -228,7 +229,7 @@ test("hosted seeding only accepts a supabase.co project and real clinician email
   assert.throws(() => assertHostedUrl("https://127.0.0.1:55431"));
   assert.throws(() => assertHostedUrl(undefined));
   const one = parseClinicians("Ollie@Example.com:Dr Ollie Yates");
-  assert.deepEqual(one.a, { email: "ollie@example.com", fullName: "Dr Ollie Yates" });
+  assert.deepEqual(one.a, { email: "ollie@example.com", fullName: "Dr Ollie Yates", roster: true });
   assert.deepEqual(one.b, one.a);
   assert.equal(parseClinicians("a@x.co, b@y.co:Dr B").b.fullName, "Dr B");
   const four = parseClinicians("a@x.co:Dr A,b@y.co:Dr B,c@z.co:Dr C,A@x.co:Dup,d@w.co:Dr D");
@@ -256,4 +257,21 @@ test("hosted demo patients match supabase/seed.sql exactly", () => {
     assert.ok(section("medications").includes(`('${m.patient_id}', '${m.name}', '${m.dose}', '${m.frequency}'`), m.name);
   for (const c of demoConditions)
     assert.ok(section("medical_conditions").includes(`('${c.patient_id}', '${c.condition}'`), c.condition);
+});
+
+test("the team roster starts friends at 4pm and leaves no-roster people off", () => {
+  const team = parseClinicians(
+    "a@x.co:Dr A,b@y.co:Dr B,liam@z.co:Dr Liam Yeo,mel@w.co:Dr Mel Yates:no-roster",
+  );
+  assert.equal(team.all.find((c) => c.email === "mel@w.co")?.fullName, "Dr Mel Yates");
+  assert.equal(team.all.find((c) => c.email === "mel@w.co")?.roster, false);
+  const shifts = buildDemoRoster(team, Date.parse("2026-09-26T02:00:00Z")); // 2pm Sat NZ
+  assert.ok(!shifts.some((s) => s.staff_name === "Dr Mel Yates"), "Mel is not rostered");
+  const liamToday = shifts.find(
+    (s) => s.staff_name === "Dr Liam Yeo" && s.starts_at === "2026-09-26T04:00:00.000Z",
+  );
+  assert.ok(liamToday, "Liam starts at 4pm NZ today");
+  assert.equal(liamToday!.ends_at, "2026-09-26T12:00:00.000Z", "and finishes at midnight");
+  assert.ok(shifts.some((s) => s.staff_name === "Dr A") && shifts.some((s) => s.staff_name === "Dr B"));
+  assert.ok(shifts.some((s) => s.role === "nurse"));
 });

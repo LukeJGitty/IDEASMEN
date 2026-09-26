@@ -33,6 +33,9 @@ export function AppHeader({ email, openTasks = 0 }: { email: string; openTasks?:
           <Link href="/roster" className="text-sm font-medium text-hippo-900 underline-offset-4 hover:underline">
             Roster
           </Link>
+          <Link href="/referrals" className="text-sm font-medium text-hippo-900 underline-offset-4 hover:underline">
+            Referrals
+          </Link>
           <Link href="/patients/new" className="text-sm font-medium text-hippo-900 underline-offset-4 hover:underline">
             New patient
           </Link>
