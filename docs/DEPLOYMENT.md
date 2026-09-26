@@ -88,6 +88,10 @@ On the Vercel address, on a phone and a laptop:
 
 While it is on, anyone can use the AI features on your OpenAI key and see and edit the fictional demo patients. Set a monthly budget in the OpenAI dashboard (Settings, Limits) and keep the "fictional patient data only" rule.
 
+## Resetting the demo
+
+If people add silly patients, run `pnpm db:reset-hosted` to see what they added (nothing changes), then `pnpm db:reset-hosted --yes` to remove every patient, consultation (with its recording), task and referral that isn't part of the demo and restore the 18 demo patients exactly. Logins, the roster and the referral directory are kept.
+
 ## Updating the database later
 
 When a new migration is merged (for example the referrals directory), run `pnpm supabase db push` from the IDEASMEN folder to apply it to the hosted project, then `pnpm db:seed-hosted` if you want the refreshed demo data.
