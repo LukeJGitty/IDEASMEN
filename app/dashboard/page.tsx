@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { updateTaskAction } from "@/app/tasks/actions";
+import { DashboardInsights } from "@/components/dashboard/insights";
 import { TeamToday } from "@/components/dashboard/team-today";
 import { WeekChart } from "@/components/dashboard/week-chart";
 import { FollowUpsThisWeek, ResultsToChase } from "@/components/dashboard/work-panels";
@@ -240,6 +241,8 @@ export default async function DashboardPage() {
           </section>
         </div>
       </div>
+
+      <DashboardInsights data={data} />
     </main>
   );
 }

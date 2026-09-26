@@ -9,12 +9,13 @@
  */
 import assert from "node:assert/strict";
 import type { Json } from "../lib/database.types";
-import { demoConditions, demoMedications, demoPatients } from "./demo-patients";
+import { P, demoConditions, demoMedications, demoPatients } from "./demo-patients";
+import { historyConsultations, historyReferrals, historyTasks } from "./demo-history";
+import { ageOn } from "../lib/handover/build";
 import { buildDemoRoster } from "./demo-roster";
 import { composeLetter, mockLetterBody } from "../lib/referrals/letter";
 import { ensureClinicians, resolveTarget } from "./seed-target";
 
-const P = (n: number) => `00000000-0000-4000-8000-00000000000${n}`; // seed.sql patients
 const id = (prefix: string, n: number) => `${prefix}000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 type Note = {
@@ -28,6 +29,8 @@ type Note = {
   followUp: string;
 };
 const note = (n: Note) => n as unknown as Json;
+/** Deterministic spread of note turnaround times so the dashboard chart has shape. */
+const turnaroundHours = (n: number) => [0.33, 1.5, 0.75, 4, 2.5, 26, 0.5, 6, 1, 18][n % 10];
 
 const consultations: {
   n: number;
@@ -170,10 +173,14 @@ async function main() {
 
   if (target.hosted) {
     // A hosted project never runs seed.sql, so load the same fictional patients here.
+    // Patients added during demos are left untouched (every write below is to demo IDs).
+    // Many non-demo patients suggests a real project, so refuse rather than guess.
+    const others = [...found].filter((pid) => !demoPatientIds.includes(pid)).length;
     assert.ok(
-      [...found].every((pid) => demoPatientIds.includes(pid)),
-      "This hosted project has patients that are not demo patients. Refusing to seed demo data into it.",
+      others <= 25,
+      `This hosted project has ${others} non-demo patients, so it may hold real data. Refusing to seed demo data into it.`,
     );
+    if (others) console.log(`Leaving ${others} patient(s) added on the site untouched.`);
     const upserted = await admin.from("patients").upsert(demoPatients, { onConflict: "id" });
     assert.equal(upserted.error, null, upserted.error?.message);
     assert.equal((await admin.from("medications").delete().in("patient_id", demoPatientIds)).error, null);
@@ -192,18 +199,22 @@ async function main() {
   const now = Date.now();
   const at = (hours: number) => new Date(now + hours * 3_600_000).toISOString();
 
+  const allConsultations = [...consultations, ...historyConsultations];
+  const allTasks = [...tasks, ...historyTasks];
+
   // Replace this script's own rows only.
-  const taskIds = tasks.map((t) => id("da", t.n));
-  const demoReferralId = id("db", 1);
-  assert.equal((await admin.from("referrals").delete().eq("id", demoReferralId)).error, null);
-  const consultationIds = consultations.map((c) => id("dc", c.n));
+  const taskIds = allTasks.map((t) => id("da", t.n));
+  const referralIds = [1, ...historyReferrals.map((r) => r.n)].map((n) => id("db", n));
+  assert.equal((await admin.from("referrals").delete().in("id", referralIds)).error, null);
+  const consultationIds = allConsultations.map((c) => id("dc", c.n));
   assert.equal((await admin.from("tasks").delete().in("id", taskIds)).error, null);
   assert.equal((await admin.from("consultations").delete().in("id", consultationIds)).error, null);
   assert.equal((await admin.from("roster_shifts").delete().like("notes", "demo%")).error, null);
 
   const { error: consultationError } = await admin.from("consultations").insert(
-    consultations.map((c) => {
-      const finalNote = c.status === "finalised" || c.status === "reviewing" ? (c.final ?? c.draft) : undefined;
+    allConsultations.map((c) => {
+      const finalNote =
+        c.status === "finalised" || c.status === "reviewing" ? ("final" in c && c.final ? c.final : c.draft) : undefined;
       return {
         id: id("dc", c.n),
         patient_id: P(c.patient),
@@ -214,14 +225,15 @@ async function main() {
         generated_draft: c.draft ? note(c.draft) : null,
         final_note: finalNote ? note(finalNote) : null,
         finalised_by: c.status === "finalised" ? doctors[c.by] : null,
-        finalised_at: c.status === "finalised" ? at(-c.hoursAgo + 0.25) : null,
+        // Varied, realistic turnaround (20 min to a day), never later than now.
+        finalised_at: c.status === "finalised" ? at(-c.hoursAgo + Math.min(turnaroundHours(c.n), c.hoursAgo * 0.9)) : null,
       };
     }),
   );
   assert.equal(consultationError, null, consultationError?.message);
 
   const { error: taskError } = await admin.from("tasks").insert(
-    tasks.map((t) => ({
+    allTasks.map((t) => ({
       id: id("da", t.n),
       patient_id: P(t.patient),
       consultation_id: t.consultation ? id("dc", t.consultation) : null,
@@ -234,44 +246,71 @@ async function main() {
   );
   assert.equal(taskError, null, taskError?.message);
   // New tasks must start open; the database stamps completion on the update.
-  const doneIds = tasks.filter((t) => t.done).map((t) => id("da", t.n));
+  const doneIds = allTasks.filter((t) => t.done).map((t) => id("da", t.n));
   assert.equal((await admin.from("tasks").update({ status: "done" }).in("id", doneIds)).error, null);
 
-  // One referral already in flight: Jack's cardiology referral, chased by task 7.
-  const jack = demoPatients.find((p) => p.id === P(6))!;
-  const jackNote = consultations.find((c) => c.n === 5)!.draft!;
-  const { error: referralError } = await admin.from("referrals").insert({
-    id: demoReferralId,
-    patient_id: P(6),
-    consultation_id: id("dc", 5),
-    facility_id: "f0000000-0000-4000-8000-000000000011", // Christchurch Heart Group
-    service: "cardiology",
-    urgency: "soon",
-    reason: "Exertional chest tightness, possible stable angina. ECG normal.",
-    letter: composeLetter({
-      facilityName: "Christchurch Heart Group",
-      service: "cardiology",
-      urgency: "soon",
-      patientName: `${jack.first_name} ${jack.last_name}`,
-      dateOfBirth: jack.date_of_birth,
-      nhi: jack.nhi ?? undefined,
-      body: mockLetterBody({
-        facilityName: "Christchurch Heart Group",
-        service: "cardiology",
-        urgency: "soon",
-        reason: "Exertional chest tightness, possible stable angina. ECG normal.",
-        age: 45,
-        note: jackNote,
-        medications: [],
-        conditions: [],
-      }),
-      clinicianName: target.clinicians.a.fullName,
-      date: new Date(now - 72 * 3_600_000),
+  // Referrals in different states, with letters built from each patient's record and note.
+  const referrals = [
+    {
+      n: 1, patient: 6, consultation: 5, by: "a" as const, task: 7, status: "sent" as const,
+      facilityId: "f0000000-0000-4000-8000-000000000011", facilityName: "Christchurch Heart Group",
+      service: "cardiology" as const, urgency: "soon" as const,
+      reason: "Exertional chest tightness, possible stable angina. ECG normal.",
+    },
+    ...historyReferrals,
+  ];
+  const { error: referralError } = await admin.from("referrals").insert(
+    referrals.map((r) => {
+      const patient = demoPatients.find((p) => p.id === P(r.patient))!;
+      const consultation = allConsultations.find((c) => c.n === r.consultation)!;
+      const when = now - consultation.hoursAgo * 3_600_000 + 1_800_000;
+      const medications = demoMedications
+        .filter((m) => m.patient_id === P(r.patient))
+        .map((m, i) => ({
+          id: String(i), patientId: P(r.patient), name: m.name, dose: m.dose ?? "",
+          frequency: m.frequency ?? "", status: m.status === "stopped" ? ("stopped" as const) : ("active" as const),
+        }));
+      const conditions = demoConditions
+        .filter((c) => c.patient_id === P(r.patient))
+        .map((c, i) => ({
+          id: String(i), patientId: P(r.patient), condition: c.condition,
+          status: c.status === "resolved" ? ("resolved" as const) : ("active" as const),
+        }));
+      return {
+        id: id("db", r.n),
+        patient_id: P(r.patient),
+        consultation_id: id("dc", r.consultation),
+        facility_id: r.facilityId,
+        service: r.service,
+        urgency: r.urgency,
+        reason: r.reason,
+        status: r.status,
+        letter: composeLetter({
+          facilityName: r.facilityName,
+          service: r.service,
+          urgency: r.urgency,
+          patientName: `${patient.first_name} ${patient.last_name}`,
+          dateOfBirth: patient.date_of_birth,
+          nhi: patient.nhi ?? undefined,
+          body: mockLetterBody({
+            facilityName: r.facilityName,
+            service: r.service,
+            urgency: r.urgency,
+            reason: r.reason,
+            age: ageOn(patient.date_of_birth, new Date(when)),
+            note: consultation.draft,
+            medications,
+            conditions,
+          }),
+          clinicianName: target.clinicians[r.by].fullName,
+          date: new Date(when),
+        }),
+        task_id: r.task ? id("da", r.task) : null,
+        created_by: doctors[r.by],
+        created_at: new Date(when).toISOString(),
+      };
     }),
-    task_id: id("da", 7),
-    created_by: doctors.a,
-    created_at: at(-72),
-  });
+  );
   assert.equal(referralError, null, referralError?.message);
 
   const shifts = buildDemoRoster(target.clinicians, now);
@@ -279,7 +318,7 @@ async function main() {
   assert.equal(rosterError, null, rosterError?.message);
 
   console.log(
-    `Demo data ready: ${consultations.length} consultations, ${tasks.length} tasks, ${shifts.length} roster shifts.`,
+    `Demo data ready: ${demoPatients.length} patients, ${allConsultations.length} consultations, ${allTasks.length} tasks, ${referrals.length} referrals, ${shifts.length} roster shifts.`,
   );
   console.log("Try: search NHI ZZZ0075 (Sione, ready to generate a draft), or open Tasks, Handover and Roster.");
 }

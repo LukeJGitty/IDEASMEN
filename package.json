@@ -20,6 +20,8 @@
     "db:seed-demo": "tsx scripts/seed-demo-data.ts",
     "db:seed-hosted": "tsx --env-file=.env.seed.local scripts/seed-demo-data.ts --hosted",
     "db:roster": "tsx scripts/seed-roster.ts",
+    "db:reset-demo": "tsx scripts/reset-demo.ts",
+    "db:reset-hosted": "tsx --env-file=.env.seed.local scripts/reset-demo.ts --hosted",
     "db:roster-hosted": "tsx --env-file=.env.seed.local scripts/seed-roster.ts --hosted",
     "db:open-demo-hosted": "tsx --env-file=.env.seed.local scripts/open-demo.ts --hosted",
     "db:clinicians-hosted": "tsx --env-file=.env.seed.local scripts/seed-demo-users.ts --hosted",

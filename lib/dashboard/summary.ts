@@ -12,6 +12,7 @@ export interface DashboardConsultation {
   doctorId: string;
   status: ConsultationStatus;
   consultedAt: string;
+  finalisedAt?: string;
 }
 
 /** Statuses where a clinician still has to act before the note is finished. */

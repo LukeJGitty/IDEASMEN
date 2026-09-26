@@ -49,7 +49,7 @@ To send codes to anyone, and more often, add your own email sender under **Authe
 
    Use your team's real email addresses: on the hosted site, sign-in codes are really emailed. These accounts are approved as clinicians; anyone else who signs up sees "not authorised" and cannot read patients or use the AI.
 
-3. Run `pnpm db:seed-hosted`. It loads the 8 fictional patients, consultations, tasks and a week of roster (doctors and round-the-clock ward nurses), timed relative to now. Re-run it any time to refresh the demo. It refuses to run against a project that contains non-demo patients.
+3. Run `pnpm db:seed-hosted`. It loads 18 fictional patients with their history (conditions, medicines and past consultations), tasks, referrals and a week of roster (doctors and round-the-clock ward nurses), timed relative to now. Re-run it any time to refresh the demo. A few patients added on the site are left untouched; it refuses if the project has more than 25 non-demo patients, since that looks like real data.
 
    Everyone listed in `SEED_CLINICIANS` becomes a clinician; the first two own the demo consultations and tasks. To add people later without touching any data, add them to `SEED_CLINICIANS` and run `pnpm db:clinicians-hosted`. Add `:no-roster` after someone's name (for example `mel@example.com:Dr Mel Yates:no-roster`) to give them a login but keep them off the roster. Everyone else beyond the first two gets an evening clinic shift from 4pm; run `pnpm db:roster-hosted` to rebuild just the roster.
 
@@ -87,6 +87,10 @@ On the Vercel address, on a phone and a laptop:
 `pnpm db:open-demo-hosted on` lets anyone sign in with any email; they appear as **Dr Demo**, while people in `SEED_CLINICIANS` keep their names. `pnpm db:open-demo-hosted off` switches back and removes the Dr Demo accounts' access. It is off by default and never affects local development.
 
 While it is on, anyone can use the AI features on your OpenAI key and see and edit the fictional demo patients. Set a monthly budget in the OpenAI dashboard (Settings, Limits) and keep the "fictional patient data only" rule.
+
+## Resetting the demo
+
+If people add silly patients, run `pnpm db:reset-hosted` to see what they added (nothing changes), then `pnpm db:reset-hosted --yes` to remove every patient, consultation (with its recording), task and referral that isn't part of the demo and restore the 18 demo patients exactly. Logins, the roster and the referral directory are kept.
 
 ## Updating the database later
 
