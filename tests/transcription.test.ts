@@ -43,3 +43,18 @@ test("OpenAI transcription failures become provider errors without leaking detai
     ProviderError,
   );
 });
+
+import { isSampleTranscript, MOCK_TRANSCRIPT, noteProviderFrom, transcriptionProviderFrom } from "../lib/providers";
+
+test("provider settings are forgiving of spaces, quotes, capitals and comments", () => {
+  for (const v of ["openai", " openai ", "OpenAI", "'openai'", '"openai"', "openai # real AI", "openai\r"])
+    assert.equal(transcriptionProviderFrom(v), "openai", JSON.stringify(v));
+  assert.equal(transcriptionProviderFrom(undefined), "mock");
+  assert.equal(transcriptionProviderFrom(""), "mock");
+  assert.equal(transcriptionProviderFrom("whisper"), "whisper", "unknown values still fail loudly");
+  assert.equal(noteProviderFrom(" OPENAI"), "openai");
+  assert.equal(noteProviderFrom("anthropic"), "anthropic");
+  assert.equal(noteProviderFrom("nonsense"), "mock");
+  assert.equal(isSampleTranscript(`\n${MOCK_TRANSCRIPT}\n`), true);
+  assert.equal(isSampleTranscript("Patient: my knee hurts."), false);
+});
