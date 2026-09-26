@@ -9,15 +9,17 @@ import {
   parseModelNote,
   type NoteContext,
 } from "@/lib/notes/generation";
+import { generateNoteWithOpenAI } from "@/lib/notes/openai";
 import type { ClinicalNote } from "@/types/consultation";
 
 export { NoteGenerationError, type NoteContext };
 
 // `mock` is the default until the owner approves paid API spend (see AGENTS.md).
-export type NoteProvider = "mock" | "anthropic";
+export type NoteProvider = "mock" | "anthropic" | "openai";
 
 export function noteProvider(): NoteProvider {
-  return process.env.NOTE_PROVIDER === "anthropic" ? "anthropic" : "mock";
+  const provider = process.env.NOTE_PROVIDER;
+  return provider === "anthropic" || provider === "openai" ? provider : "mock";
 }
 
 export async function generateNote(
@@ -25,7 +27,14 @@ export async function generateNote(
   context: NoteContext,
 ): Promise<ClinicalNote> {
   if (!transcript.trim()) throw new NoteGenerationError("The transcript is empty.");
-  if (noteProvider() === "mock") return mockClinicalNote(transcript, context);
+  const provider = noteProvider();
+  if (provider === "mock") return mockClinicalNote(transcript, context);
+  if (provider === "openai") {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey)
+      throw new NoteGenerationError("NOTE_PROVIDER is openai but OPENAI_API_KEY is not set.");
+    return generateNoteWithOpenAI(transcript, context, { apiKey, model: process.env.OPENAI_NOTE_MODEL });
+  }
   return generateWithClaude(transcript, context);
 }
 

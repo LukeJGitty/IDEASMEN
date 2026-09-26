@@ -33,7 +33,11 @@ const describeMedication = (m: Medication) =>
 const describeCondition = (c: MedicalCondition) =>
   c.diagnosedDate ? `${c.condition} (since ${c.diagnosedDate.slice(0, 4)})` : c.condition;
 
-export function buildNotePrompt(transcript: string, context: NoteContext) {
+export function buildNotePrompt(
+  transcript: string,
+  context: NoteContext,
+  closing = `Record the draft note with the ${NOTE_TOOL_NAME} tool.`,
+) {
   const meds = context.medications.filter((m) => m.status === "active").map(describeMedication);
   const conditions = context.conditions
     .filter((c) => c.status === "active")
@@ -48,7 +52,7 @@ export function buildNotePrompt(transcript: string, context: NoteContext) {
     transcript,
     "</transcript>",
     "",
-    `Record the draft note with the ${NOTE_TOOL_NAME} tool.`,
+    closing,
   ].join("\n");
 }
 
