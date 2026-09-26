@@ -10,6 +10,7 @@ import {
   type NoteContext,
 } from "@/lib/notes/generation";
 import { generateNoteWithOpenAI } from "@/lib/notes/openai";
+import { noteProviderFrom } from "@/lib/providers";
 import type { ClinicalNote } from "@/types/consultation";
 
 export { NoteGenerationError, type NoteContext };
@@ -18,8 +19,7 @@ export { NoteGenerationError, type NoteContext };
 export type NoteProvider = "mock" | "anthropic" | "openai";
 
 export function noteProvider(): NoteProvider {
-  const provider = process.env.NOTE_PROVIDER;
-  return provider === "anthropic" || provider === "openai" ? provider : "mock";
+  return noteProviderFrom(process.env.NOTE_PROVIDER);
 }
 
 export async function generateNote(

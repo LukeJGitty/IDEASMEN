@@ -7,6 +7,7 @@ import { Recorder } from "@/components/consultation/recorder";
 import { Transcript } from "@/components/consultation/transcript";
 import { NoteStep } from "@/components/consultation/note-step";
 import { getClinicianName } from "@/lib/data/notes";
+import { isSampleTranscript, transcriptionProviderFrom } from "@/lib/providers";
 
 export const metadata = { title: "Consultation" };
 // AI transcription and note drafting can take a while; allow up to 2 minutes on Vercel.
@@ -52,7 +53,7 @@ export default async function ConsultationPage({
       <div className="mt-10 space-y-8">
         {consultation.transcript ? (
           <>
-            <Transcript text={consultation.transcript} />
+            <Transcript text={consultation.transcript} sample={isSampleTranscript(consultation.transcript)} />
             <section aria-labelledby="note-heading">
               <h2 id="note-heading" className="mb-4 text-lg font-semibold">
                 Clinical note
@@ -64,10 +65,19 @@ export default async function ConsultationPage({
             </section>
           </>
         ) : (
-          <Recorder
+          <>
+            {transcriptionProviderFrom(process.env.TRANSCRIPTION_PROVIDER) === "mock" && (
+              <p role="note" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6">
+                <strong>Demo transcription is on.</strong> Recordings are saved, but the transcript will be a fixed
+                sample conversation. To transcribe real speech, set <code>TRANSCRIPTION_PROVIDER</code> to{" "}
+                <code>openai</code> (with <code>OPENAI_API_KEY</code>) and redeploy.
+              </p>
+            )}
+            <Recorder
             consultationId={consultation.id}
             audioSaved={Boolean(consultation.audioPath)}
           />
+          </>
         )}
       </div>
     </main>
