@@ -15,16 +15,17 @@ import {
 import { getClinicianName } from "@/lib/data/notes";
 import { QueryError } from "@/lib/data/queries";
 import { listShifts } from "@/lib/data/roster";
+import { noteTurnaround, teamWorkload, timeSaved } from "@/lib/dashboard/insights";
 import { listClinicians, listTasks, toTask } from "@/lib/data/tasks";
 import { nzLocalToIso } from "@/lib/time";
 import type { ConsultationStatus } from "@/types/consultation";
 
 type Client = SupabaseClient<Database>;
-type Row = Pick<Tables<"consultations">, "id" | "patient_id" | "doctor_id" | "status" | "consulted_at"> & {
+type Row = Pick<Tables<"consultations">, "id" | "patient_id" | "doctor_id" | "status" | "consulted_at" | "finalised_at"> & {
   patients: { first_name: string; last_name: string } | null;
 };
 
-const COLUMNS = "id, patient_id, doctor_id, status, consulted_at, patients(first_name, last_name)";
+const COLUMNS = "id, patient_id, doctor_id, status, consulted_at, finalised_at, patients(first_name, last_name)";
 
 const toDashboardConsultation = (row: Row): DashboardConsultation => ({
   id: row.id,
@@ -33,6 +34,7 @@ const toDashboardConsultation = (row: Row): DashboardConsultation => ({
   doctorId: row.doctor_id,
   status: row.status as ConsultationStatus,
   consultedAt: row.consulted_at,
+  finalisedAt: row.finalised_at ?? undefined,
 });
 
 /** Everything the shift dashboard shows, loaded in parallel. RLS applies to every query. */
@@ -80,6 +82,9 @@ export async function loadDashboard(supabase: Client, userId: string, now = new 
     resultsTotal: resultsToChase(openTasks).length,
     followUps: followUpsThisWeek(openTasks, now).slice(0, 8),
     clinicians,
+    turnaround: noteTurnaround(consultations, days),
+    workload: teamWorkload(openTasks, clinicians, now),
+    saved: timeSaved(consultations, days),
   };
 }
 

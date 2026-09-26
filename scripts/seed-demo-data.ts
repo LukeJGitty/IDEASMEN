@@ -29,6 +29,8 @@ type Note = {
   followUp: string;
 };
 const note = (n: Note) => n as unknown as Json;
+/** Deterministic spread of note turnaround times so the dashboard chart has shape. */
+const turnaroundHours = (n: number) => [0.33, 1.5, 0.75, 4, 2.5, 26, 0.5, 6, 1, 18][n % 10];
 
 const consultations: {
   n: number;
@@ -223,7 +225,8 @@ async function main() {
         generated_draft: c.draft ? note(c.draft) : null,
         final_note: finalNote ? note(finalNote) : null,
         finalised_by: c.status === "finalised" ? doctors[c.by] : null,
-        finalised_at: c.status === "finalised" ? at(-c.hoursAgo + 0.25) : null,
+        // Varied, realistic turnaround (20 min to a day), never later than now.
+        finalised_at: c.status === "finalised" ? at(-c.hoursAgo + Math.min(turnaroundHours(c.n), c.hoursAgo * 0.9)) : null,
       };
     }),
   );
