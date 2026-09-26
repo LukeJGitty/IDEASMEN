@@ -268,6 +268,117 @@ export type Database = {
         };
         Relationships: [];
       };
+      referral_facilities: {
+        Row: {
+          acc_funded: boolean;
+          accepting: boolean;
+          access_note: string | null;
+          address: string;
+          fee_nzd: number | null;
+          hours: string | null;
+          id: string;
+          name: string;
+          phone: string | null;
+          price_note: string | null;
+          sector: string;
+          services: string[];
+          source_url: string | null;
+          updated_at: string;
+          updated_by: string | null;
+          wait_days: number | null;
+          wait_is_estimate: boolean;
+          website: string | null;
+        };
+        Insert: {
+          acc_funded?: boolean;
+          accepting?: boolean;
+          access_note?: string | null;
+          address: string;
+          fee_nzd?: number | null;
+          hours?: string | null;
+          id?: string;
+          name: string;
+          phone?: string | null;
+          price_note?: string | null;
+          sector: string;
+          services: string[];
+          source_url?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+          wait_days?: number | null;
+          wait_is_estimate?: boolean;
+          website?: string | null;
+        };
+        Update: {
+          acc_funded?: boolean;
+          accepting?: boolean;
+          access_note?: string | null;
+          address?: string;
+          fee_nzd?: number | null;
+          hours?: string | null;
+          id?: string;
+          name?: string;
+          phone?: string | null;
+          price_note?: string | null;
+          sector?: string;
+          services?: string[];
+          source_url?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+          wait_days?: number | null;
+          wait_is_estimate?: boolean;
+          website?: string | null;
+        };
+        Relationships: [];
+      };
+      referrals: {
+        Row: {
+          consultation_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          letter: string;
+          patient_id: string;
+          reason: string;
+          service: string;
+          status: string;
+          task_id: string | null;
+          updated_at: string;
+          urgency: string;
+        };
+        Insert: {
+          consultation_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          letter: string;
+          patient_id: string;
+          reason: string;
+          service: string;
+          status?: string;
+          task_id?: string | null;
+          updated_at?: string;
+          urgency?: string;
+        };
+        Update: {
+          consultation_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          letter?: string;
+          patient_id?: string;
+          reason?: string;
+          service?: string;
+          status?: string;
+          task_id?: string | null;
+          updated_at?: string;
+          urgency?: string;
+        };
+        Relationships: [];
+      };
       roster_shifts: {
         Row: {
           area: string;

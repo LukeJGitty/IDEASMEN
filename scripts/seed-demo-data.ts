@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import type { Json } from "../lib/database.types";
 import { demoConditions, demoMedications, demoPatients } from "./demo-patients";
 import { buildDemoRoster } from "./demo-roster";
+import { composeLetter, mockLetterBody } from "../lib/referrals/letter";
 import { ensureClinicians, resolveTarget } from "./seed-target";
 
 const P = (n: number) => `00000000-0000-4000-8000-00000000000${n}`; // seed.sql patients
@@ -193,6 +194,8 @@ async function main() {
 
   // Replace this script's own rows only.
   const taskIds = tasks.map((t) => id("da", t.n));
+  const demoReferralId = id("db", 1);
+  assert.equal((await admin.from("referrals").delete().eq("id", demoReferralId)).error, null);
   const consultationIds = consultations.map((c) => id("dc", c.n));
   assert.equal((await admin.from("tasks").delete().in("id", taskIds)).error, null);
   assert.equal((await admin.from("consultations").delete().in("id", consultationIds)).error, null);
@@ -233,6 +236,43 @@ async function main() {
   // New tasks must start open; the database stamps completion on the update.
   const doneIds = tasks.filter((t) => t.done).map((t) => id("da", t.n));
   assert.equal((await admin.from("tasks").update({ status: "done" }).in("id", doneIds)).error, null);
+
+  // One referral already in flight: Jack's cardiology referral, chased by task 7.
+  const jack = demoPatients.find((p) => p.id === P(6))!;
+  const jackNote = consultations.find((c) => c.n === 5)!.draft!;
+  const { error: referralError } = await admin.from("referrals").insert({
+    id: demoReferralId,
+    patient_id: P(6),
+    consultation_id: id("dc", 5),
+    facility_id: "f0000000-0000-4000-8000-000000000011", // Christchurch Heart Group
+    service: "cardiology",
+    urgency: "soon",
+    reason: "Exertional chest tightness, possible stable angina. ECG normal.",
+    letter: composeLetter({
+      facilityName: "Christchurch Heart Group",
+      service: "cardiology",
+      urgency: "soon",
+      patientName: `${jack.first_name} ${jack.last_name}`,
+      dateOfBirth: jack.date_of_birth,
+      nhi: jack.nhi ?? undefined,
+      body: mockLetterBody({
+        facilityName: "Christchurch Heart Group",
+        service: "cardiology",
+        urgency: "soon",
+        reason: "Exertional chest tightness, possible stable angina. ECG normal.",
+        age: 45,
+        note: jackNote,
+        medications: [],
+        conditions: [],
+      }),
+      clinicianName: target.clinicians.a.fullName,
+      date: new Date(now - 72 * 3_600_000),
+    }),
+    task_id: id("da", 7),
+    created_by: doctors.a,
+    created_at: at(-72),
+  });
+  assert.equal(referralError, null, referralError?.message);
 
   const shifts = buildDemoRoster(target.clinicians, now);
   const { error: rosterError } = await admin.from("roster_shifts").insert(shifts);
