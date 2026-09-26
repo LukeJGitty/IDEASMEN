@@ -51,6 +51,8 @@ To send codes to anyone, and more often, add your own email sender under **Authe
 
 3. Run `pnpm db:seed-hosted`. It loads the 8 fictional patients, consultations, tasks and a week of roster (doctors and round-the-clock ward nurses), timed relative to now. Re-run it any time to refresh the demo. It refuses to run against a project that contains non-demo patients.
 
+   Everyone listed in `SEED_CLINICIANS` becomes a clinician; the first two own the demo consultations and tasks. To add people later without touching any data, add them to `SEED_CLINICIANS` and run `pnpm db:clinicians-hosted`.
+
 ## 3. Deploy the website (Vercel)
 
 1. Sign in at [vercel.com](https://vercel.com) with GitHub, **Add New → Project**, and import **IDEASMEN**. The repository belongs to Luke's GitHub account, so if Vercel cannot see it, ask Luke to do this step or to give Vercel access to the repository.
