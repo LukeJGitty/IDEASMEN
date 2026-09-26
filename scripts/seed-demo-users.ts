@@ -1,10 +1,13 @@
-/** Creates (or re-flags) the demo clinicians. Local by default; see scripts/seed-target.ts. */
+/**
+ * Creates (or re-flags) the clinicians without touching any other data.
+ * Local: pnpm db:seed-users. Hosted: pnpm db:clinicians-hosted (reads SEED_CLINICIANS).
+ */
 import { ensureClinicians, resolveTarget } from "./seed-target";
 
 async function main() {
   const target = resolveTarget();
   await ensureClinicians(target);
-  for (const { email } of new Set(Object.values(target.clinicians))) console.log(`Clinician ready: ${email}`);
+  for (const { email, fullName } of target.clinicians.all) console.log(`Clinician ready: ${fullName} <${email}>`);
 }
 
 main().catch((error) => {

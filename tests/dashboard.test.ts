@@ -231,6 +231,9 @@ test("hosted seeding only accepts a supabase.co project and real clinician email
   assert.deepEqual(one.a, { email: "ollie@example.com", fullName: "Dr Ollie Yates" });
   assert.deepEqual(one.b, one.a);
   assert.equal(parseClinicians("a@x.co, b@y.co:Dr B").b.fullName, "Dr B");
+  const four = parseClinicians("a@x.co:Dr A,b@y.co:Dr B,c@z.co:Dr C,A@x.co:Dup,d@w.co:Dr D");
+  assert.deepEqual(four.all.map((c) => c.email), ["a@x.co", "b@y.co", "c@z.co", "d@w.co"]);
+  assert.equal(four.b.email, "b@y.co");
   assert.throws(() => parseClinicians(""));
   assert.throws(() => parseClinicians("not-an-email"));
 });

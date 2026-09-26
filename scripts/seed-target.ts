@@ -24,15 +24,18 @@ export interface SeedClinician {
 export interface SeedTarget {
   hosted: boolean;
   admin: SupabaseClient<Database>;
-  clinicians: { a: SeedClinician; b: SeedClinician };
+  /** a and b own the demo consultations and tasks; `all` are made clinicians. */
+  clinicians: { a: SeedClinician; b: SeedClinician; all: SeedClinician[] };
 }
 
-const LOCAL_CLINICIANS = {
-  a: { email: "clinician.a@example.com", fullName: "Dr Demo A" },
-  b: { email: "clinician.b@example.com", fullName: "Dr Demo B" },
-};
+const LOCAL_A = { email: "clinician.a@example.com", fullName: "Dr Demo A" };
+const LOCAL_B = { email: "clinician.b@example.com", fullName: "Dr Demo B" };
+const LOCAL_CLINICIANS = { a: LOCAL_A, b: LOCAL_B, all: [LOCAL_A, LOCAL_B] };
 
-/** "a@x.com:Dr A,b@y.com:Dr B" -> clinicians a and b (b falls back to a if only one is given). */
+/**
+ * "a@x.com:Dr A,b@y.com:Dr B,c@z.com:Dr C" -> every listed person becomes a clinician; the
+ * first two own the demo data (b falls back to a if only one is given).
+ */
 export function parseClinicians(value: string | undefined): SeedTarget["clinicians"] {
   const list = (value ?? "")
     .split(",")
@@ -45,7 +48,8 @@ export function parseClinicians(value: string | undefined): SeedTarget["clinicia
       return { email: clean, fullName: name.join(":").trim() || clean.split("@")[0] };
     });
   assert.ok(list.length > 0, "Set SEED_CLINICIANS to at least one real email address (see scripts/seed-target.ts).");
-  return { a: list[0], b: list[1] ?? list[0] };
+  const unique = list.filter((c, i) => list.findIndex((d) => d.email === c.email) === i);
+  return { a: unique[0], b: unique[1] ?? unique[0], all: unique };
 }
 
 /** Only https://<ref>.supabase.co is accepted for hosted seeding. */
@@ -82,14 +86,13 @@ export function resolveTarget(argv = process.argv): SeedTarget {
   };
 }
 
-/** Creates (or re-flags) each clinician and returns their user ids. */
+/** Creates (or re-flags) every clinician and returns the user ids of a and b. */
 export async function ensureClinicians(target: SeedTarget) {
   const { admin } = target;
   const { data: existing, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
   assert.equal(error, null, error?.message);
-  const ids: Record<"a" | "b", string> = { a: "", b: "" };
-  for (const key of ["a", "b"] as const) {
-    const { email, fullName } = target.clinicians[key];
+  const byEmail = new Map<string, string>();
+  for (const { email, fullName } of target.clinicians.all) {
     let id: string | undefined = existing.users.find((user) => user.email?.toLowerCase() === email)?.id;
     if (!id) {
       const created = await admin.auth.admin.createUser({
@@ -107,7 +110,7 @@ export async function ensureClinicians(target: SeedTarget) {
       .update({ is_clinician: true, full_name: fullName })
       .eq("id", userId);
     assert.equal(flagged.error, null, flagged.error?.message);
-    ids[key] = userId;
+    byEmail.set(email, userId);
   }
-  return ids;
+  return { a: byEmail.get(target.clinicians.a.email)!, b: byEmail.get(target.clinicians.b.email)! };
 }
