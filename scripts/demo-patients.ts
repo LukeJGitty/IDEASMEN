@@ -6,7 +6,7 @@ import type { Database } from "../lib/database.types";
 
 type Insert<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"];
 
-export const P = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
+export const P = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 export const demoPatients: Insert<"patients">[] = [
   { id: P(1), first_name: "Aroha", last_name: "Demo-Ngata", date_of_birth: "1984-03-12", email: "aroha.demo@example.com", phone: "021 000 0001", nhi: "ZZZ0016" },
@@ -17,6 +17,16 @@ export const demoPatients: Insert<"patients">[] = [
   { id: P(6), first_name: "Jack", last_name: "Demo-Thompson", date_of_birth: "1981-09-08", email: "jack.demo@example.com", phone: "021 000 0006", nhi: "ZZZ0067" },
   { id: P(7), first_name: "Sione", last_name: "Demo-Fifita", date_of_birth: "1974-12-03", email: null, phone: "021 000 0007", nhi: "ZZZ0075" },
   { id: P(8), first_name: "Grace", last_name: "Demo-Liu", date_of_birth: "1993-04-17", email: "grace.demo@example.com", phone: "021 000 0008", nhi: "ZZZ0083" },
+  { id: P(9), first_name: "Wiremu", last_name: "Demo-Tipene", date_of_birth: "1968-02-14", email: null, phone: "021 000 0009", nhi: "ZZZ0091" },
+  { id: P(10), first_name: "Olivia", last_name: "Demo-Harris", date_of_birth: "1990-06-03", email: "olivia.demo@example.com", phone: "021 000 0010", nhi: "ZZZ0105" },
+  { id: P(11), first_name: "Faisal", last_name: "Demo-Rahman", date_of_birth: "1979-11-22", email: "faisal.demo@example.com", phone: "021 000 0011", nhi: "ZZZ0113" },
+  { id: P(12), first_name: "Ruth", last_name: "Demo-Patterson", date_of_birth: "1942-08-30", email: null, phone: "03 000 0012", nhi: "ZZZ0121" },
+  { id: P(13), first_name: "Tama", last_name: "Demo-Hohaia", date_of_birth: "2005-01-17", email: "tama.demo@example.com", phone: "021 000 0013", nhi: "ZZZ0130" },
+  { id: P(14), first_name: "Hannah", last_name: "Demo-Kim", date_of_birth: "1985-09-12", email: "hannah.demo@example.com", phone: "021 000 0014", nhi: "ZZZ0148" },
+  { id: P(15), first_name: "Peter", last_name: "Demo-Novak", date_of_birth: "1955-04-07", email: null, phone: "03 000 0015", nhi: "ZZZ0156" },
+  { id: P(16), first_name: "Leilani", last_name: "Demo-Fonoti", date_of_birth: "1998-12-01", email: "leilani.demo@example.com", phone: "021 000 0016", nhi: "ZZZ0164" },
+  { id: P(17), first_name: "Samuel", last_name: "Demo-Okafor", date_of_birth: "1972-07-19", email: "samuel.demo@example.com", phone: "021 000 0017", nhi: "ZZZ0172" },
+  { id: P(18), first_name: "Isla", last_name: "Demo-McKenzie", date_of_birth: "2019-03-25", email: null, phone: "021 000 0018", nhi: "ZZZ0199" },
 ];
 
 export const demoMedications: Insert<"medications">[] = [
@@ -31,6 +41,34 @@ export const demoMedications: Insert<"medications">[] = [
   { patient_id: P(7), name: "Metformin", dose: "1 g", frequency: "Twice daily", route: "Oral", start_date: "2019-09-09", status: "active" },
   { patient_id: P(7), name: "Empagliflozin", dose: "10 mg", frequency: "Once daily", route: "Oral", start_date: "2024-02-01", status: "active" },
   { patient_id: P(8), name: "Cetirizine", dose: "10 mg", frequency: "Once daily", route: "Oral", start_date: "2023-10-01", status: "active" },
+  { patient_id: P(9), name: "Metformin", dose: "1 g", frequency: "Twice daily", route: "Oral", start_date: "2016-03-01", status: "active" },
+  { patient_id: P(9), name: "Cilazapril", dose: "5 mg", frequency: "Once daily", route: "Oral", start_date: "2018-07-12", status: "active" },
+  { patient_id: P(9), name: "Allopurinol", dose: "300 mg", frequency: "Once daily", route: "Oral", start_date: "2021-05-20", status: "active" },
+  { patient_id: P(9), name: "Colchicine", dose: "500 mcg", frequency: "Twice daily", route: "Oral", start_date: "2026-08-10", status: "stopped" },
+  { patient_id: P(10), name: "Sumatriptan", dose: "50 mg", frequency: "As needed", route: "Oral", start_date: "2022-02-01", status: "active" },
+  { patient_id: P(10), name: "Ethinylestradiol with levonorgestrel", dose: "30/150 mcg", frequency: "Once daily", route: "Oral", start_date: "2015-01-10", status: "active" },
+  { patient_id: P(10), name: "Ferrous sulfate", dose: "325 mg", frequency: "Once daily", route: "Oral", start_date: "2026-04-02", status: "stopped" },
+  { patient_id: P(11), name: "Atorvastatin", dose: "40 mg", frequency: "Once daily", route: "Oral", start_date: "2023-09-15", status: "active" },
+  { patient_id: P(11), name: "Omeprazole", dose: "20 mg", frequency: "As needed", route: "Oral", start_date: "2024-01-20", status: "active" },
+  { patient_id: P(12), name: "Apixaban", dose: "5 mg", frequency: "Twice daily", route: "Oral", start_date: "2021-11-03", status: "active" },
+  { patient_id: P(12), name: "Metoprolol succinate", dose: "47.5 mg", frequency: "Once daily", route: "Oral", start_date: "2021-11-03", status: "active" },
+  { patient_id: P(12), name: "Alendronate", dose: "70 mg", frequency: "Once weekly", route: "Oral", start_date: "2019-06-18", status: "active" },
+  { patient_id: P(12), name: "Levothyroxine", dose: "75 mcg", frequency: "Once daily", route: "Oral", start_date: "2010-04-01", status: "active" },
+  { patient_id: P(12), name: "Paracetamol", dose: "1 g", frequency: "Four times daily as needed", route: "Oral", start_date: "2020-02-11", status: "active" },
+  { patient_id: P(13), name: "Salbutamol inhaler", dose: "100 mcg", frequency: "As needed", route: "Inhaled", start_date: "2012-05-01", status: "stopped" },
+  { patient_id: P(14), name: "Levothyroxine", dose: "100 mcg", frequency: "Once daily", route: "Oral", start_date: "2017-08-22", status: "active" },
+  { patient_id: P(14), name: "Sertraline", dose: "50 mg", frequency: "Once daily", route: "Oral", start_date: "2025-03-14", status: "active" },
+  { patient_id: P(15), name: "Tamsulosin", dose: "400 mcg", frequency: "Once daily", route: "Oral", start_date: "2024-06-05", status: "active" },
+  { patient_id: P(15), name: "Amlodipine", dose: "5 mg", frequency: "Once daily", route: "Oral", start_date: "2019-10-30", status: "active" },
+  { patient_id: P(15), name: "Aspirin", dose: "100 mg", frequency: "Once daily", route: "Oral", start_date: "2019-10-30", status: "stopped" },
+  { patient_id: P(16), name: "Insulin glargine", dose: "18 units", frequency: "Once daily at night", route: "Subcutaneous", start_date: "2014-02-10", status: "active" },
+  { patient_id: P(16), name: "Insulin aspart", dose: "Per carb ratio 1:10", frequency: "With meals", route: "Subcutaneous", start_date: "2014-02-10", status: "active" },
+  { patient_id: P(17), name: "Losartan", dose: "50 mg", frequency: "Once daily", route: "Oral", start_date: "2022-12-01", status: "active" },
+  { patient_id: P(17), name: "Ibuprofen", dose: "400 mg", frequency: "Three times daily", route: "Oral", start_date: "2026-09-01", status: "stopped" },
+  { patient_id: P(17), name: "Paracetamol", dose: "1 g", frequency: "Four times daily as needed", route: "Oral", start_date: "2026-09-01", status: "active" },
+  { patient_id: P(18), name: "Emollient cream", dose: "Apply liberally", frequency: "Twice daily", route: "Topical", start_date: "2021-05-01", status: "active" },
+  { patient_id: P(18), name: "Hydrocortisone 1% cream", dose: "Thin layer", frequency: "Twice daily for flares", route: "Topical", start_date: "2021-05-01", status: "active" },
+  { patient_id: P(18), name: "Amoxicillin", dose: "250 mg/5 mL, 7.5 mL", frequency: "Three times daily", route: "Oral", start_date: "2026-09-24", status: "active" },
 ];
 
 export const demoConditions: Insert<"medical_conditions">[] = [
@@ -43,4 +81,27 @@ export const demoConditions: Insert<"medical_conditions">[] = [
   { patient_id: P(6), condition: "Gastro-oesophageal reflux", diagnosed_date: "2024-11-20", status: "active" },
   { patient_id: P(7), condition: "Type 2 diabetes", diagnosed_date: "2019-09-01", status: "active" },
   { patient_id: P(8), condition: "Hay fever", diagnosed_date: "2012-09-01", status: "active" },
+  { patient_id: P(9), condition: "Type 2 diabetes", diagnosed_date: "2016-02-20", status: "active" },
+  { patient_id: P(9), condition: "Hypertension", diagnosed_date: "2018-07-01", status: "active" },
+  { patient_id: P(9), condition: "Gout", diagnosed_date: "2021-05-10", status: "active" },
+  { patient_id: P(10), condition: "Migraine without aura", diagnosed_date: "2012-09-01", status: "active" },
+  { patient_id: P(10), condition: "Iron deficiency", diagnosed_date: "2026-03-20", status: "resolved" },
+  { patient_id: P(11), condition: "Hypercholesterolaemia", diagnosed_date: "2023-09-01", status: "active" },
+  { patient_id: P(11), condition: "Suspected obstructive sleep apnoea", diagnosed_date: "2026-06-15", status: "active" },
+  { patient_id: P(12), condition: "Atrial fibrillation", diagnosed_date: "2021-10-20", status: "active" },
+  { patient_id: P(12), condition: "Osteoporosis", diagnosed_date: "2019-06-01", status: "active" },
+  { patient_id: P(12), condition: "Osteoarthritis of both knees", diagnosed_date: "2015-03-01", status: "active" },
+  { patient_id: P(12), condition: "Hypothyroidism", diagnosed_date: "2010-03-15", status: "active" },
+  { patient_id: P(13), condition: "Childhood asthma", diagnosed_date: "2010-04-01", status: "resolved" },
+  { patient_id: P(14), condition: "Hypothyroidism", diagnosed_date: "2017-08-01", status: "active" },
+  { patient_id: P(14), condition: "Generalised anxiety", diagnosed_date: "2025-03-01", status: "active" },
+  { patient_id: P(15), condition: "Benign prostatic hyperplasia", diagnosed_date: "2024-06-01", status: "active" },
+  { patient_id: P(15), condition: "Hypertension", diagnosed_date: "2019-10-01", status: "active" },
+  { patient_id: P(15), condition: "Chronic kidney disease stage 3a", diagnosed_date: "2023-11-01", status: "active" },
+  { patient_id: P(16), condition: "Type 1 diabetes", diagnosed_date: "2014-02-01", status: "active" },
+  { patient_id: P(16), condition: "Coeliac disease", diagnosed_date: "2016-07-01", status: "active" },
+  { patient_id: P(17), condition: "Hypertension", diagnosed_date: "2022-11-20", status: "active" },
+  { patient_id: P(17), condition: "Mechanical low back pain", diagnosed_date: "2026-09-01", status: "active" },
+  { patient_id: P(18), condition: "Atopic eczema", diagnosed_date: "2021-04-01", status: "active" },
+  { patient_id: P(18), condition: "Recurrent otitis media", diagnosed_date: "2023-06-01", status: "active" },
 ];
